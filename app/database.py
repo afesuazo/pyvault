@@ -2,11 +2,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel  # noqa  # Imported here to gather model metadata
 
-from theone.common.file_utils import get_git_root
-
 # Using a local file at the time, will migrate to postgresql
 # TODO: Move to config.toml when production DB is added
-DATABASE_URL = f"sqlite+aiosqlite:///{get_git_root()}/restapi.db"
+DATABASE_URL = f"sqlite+aiosqlite:///passwords.db"
 
 
 class TheOneDB:
