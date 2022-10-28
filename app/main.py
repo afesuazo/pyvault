@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.base import api_router
-from app.database import TheOneDB
+from app.database import PasswordDB
 
 
 def build_app() -> FastAPI:
@@ -23,5 +23,5 @@ app = build_app()
 
 @app.on_event("startup")
 async def startup() -> None:
-    app.state.DB = TheOneDB()
+    app.state.DB = PasswordDB()
     await app.state.DB.initiate_db()

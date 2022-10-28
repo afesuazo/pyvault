@@ -7,7 +7,7 @@ from sqlmodel import SQLModel  # noqa  # Imported here to gather model metadata
 DATABASE_URL = f"sqlite+aiosqlite:///passwords.db"
 
 
-class TheOneDB:
+class PasswordDB:
     def __init__(self) -> None:
         self.engine: AsyncEngine = create_async_engine(DATABASE_URL)
         self.async_session: sessionmaker[AsyncSession] = sessionmaker(
