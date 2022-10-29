@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends
 from sqlalchemy import delete, select
@@ -30,6 +30,13 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         # Scalar one or none allows empty results
         site = results.scalar_one_or_none()
         return site
+
+    async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[Site]:
+        statement = select(Site).offset(offset).limit(limit)
+        results = await self.db_session.execute(statement=statement)
+
+        sites = [r for r, in results.all()]
+        return sites
 
     async def update(self, unique_id: int, site_data: SiteUpdate) -> Site:
         site = await self.read(unique_id=unique_id)

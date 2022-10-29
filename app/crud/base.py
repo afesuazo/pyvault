@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar, List
 
 Model = TypeVar("Model")
 CreateSchema = TypeVar("CreateSchema")
@@ -23,6 +23,10 @@ class BaseCRUD(ABC, Generic[Model, CreateSchema, UpdateSchema]):
     # Just a general getter using an id
     @abstractmethod
     async def read(self, unique_id: int) -> Optional[Model]:
+        ...
+
+    @abstractmethod
+    async def read_many(self, offset: int, limit: int, group_id: Optional[int]) -> List[Model]:
         ...
 
     @abstractmethod

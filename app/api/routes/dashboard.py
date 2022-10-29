@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Query
 
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
@@ -13,6 +13,32 @@ router = APIRouter()
 @router.get("/ping")
 async def ping() -> dict[str, str]:
     return {"ping": "pong!"}
+
+
+@router.post(
+    "/sites",
+    response_model=Site,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_site(
+        site_data: SiteCreate, site_crud: SiteCRUD = Depends(SiteCRUD)
+) -> Site:
+    site = await site_crud.create(site_data=site_data)
+    return site
+
+
+@router.get(
+    "/sites/",
+    response_model=List[Site],
+    status_code=status.HTTP_200_OK,
+)
+async def read_sites(
+        offset: int = 0,
+        limit: int = Query(default=50, lte=50),
+        site_crud: SiteCRUD = Depends(SiteCRUD),
+) -> List[Site]:
+    sites = await site_crud.read_many(offset=offset, limit=limit)
+    return sites
 
 
 @router.get(
@@ -28,26 +54,14 @@ async def read_site_by_id(
 
 
 @router.post(
-    "/sites",
-    response_model=Site,
-    status_code=status.HTTP_201_CREATED
-)
-async def create_order(
-        site_data: SiteCreate, sites: SiteCRUD = Depends(SiteCRUD)
-) -> Site:
-    site = await sites.create(site_data=site_data)
-    return site
-
-
-@router.post(
     "/credentials",
     response_model=Credential,
     status_code=status.HTTP_201_CREATED
 )
-async def create_order(
-        credential_data: CredentialCreate, sites: CredentialCRUD = Depends(CredentialCRUD)
+async def create_credential(
+        credential_data: CredentialCreate, credential_crud: CredentialCRUD = Depends(CredentialCRUD)
 ) -> Credential:
-    credential = await sites.create(credential_data=credential_data)
+    credential = await credential_crud.create(credential_data=credential_data)
     return credential
 
 
@@ -57,7 +71,22 @@ async def create_order(
     status_code=status.HTTP_200_OK,
 )
 async def read_credential_by_id(
-        credential_id: int, credentials: CredentialCRUD = Depends(CredentialCRUD)
-) -> Optional[Site]:
-    credential = await credentials.read(unique_id=credential_id)
+        credential_id: int, credential_crud: CredentialCRUD = Depends(CredentialCRUD)
+) -> Optional[Credential]:
+    credential = await credential_crud.read(unique_id=credential_id)
     return credential
+
+
+@router.get(
+    "/credentials/",
+    response_model=List[Credential],
+    status_code=status.HTTP_200_OK,
+)
+async def read_credentials(
+        offset: int = 0,
+        limit: int = Query(default=10, lte=50),
+        site_id: Optional[int] = None,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+) -> List[Credential]:
+    credentials = await credential_crud.read_many(offset=offset, limit=limit, group_id=site_id)
+    return credentials
