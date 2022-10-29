@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends
 from sqlalchemy import delete, select
@@ -30,6 +30,16 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
         # Scalar one or none allows empty results
         credential = results.scalar_one_or_none()
         return credential
+
+    async def read_many(self, offset: int, limit: int, group_id: Optional[int]) -> List[Credential]:
+        if group_id:
+            statement = select(Credential).where(Credential.site_id == group_id).offset(offset).limit(limit)
+        else:
+            statement = select(Credential).offset(offset).limit(limit)
+        results = await self.db_session.execute(statement=statement)
+
+        credentials = [r for r, in results.all()]
+        return credentials
 
     async def update(self, unique_id: int, credential_data: CredentialUpdate) -> Credential:
         credential = await self.read(unique_id=unique_id)
