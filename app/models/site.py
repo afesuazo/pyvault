@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel
 # Data only model
 class SiteBase(SQLModel):
     name: str
-    url: Optional[str] = Field(default=None)
+    url: Optional[str] = Field(default=None, unique=True)
 
 
 class Site(SiteBase, table=True):
