@@ -90,3 +90,14 @@ async def read_credentials(
 ) -> List[Credential]:
     credentials = await credential_crud.read_many(offset=offset, limit=limit, group_id=site_id)
     return credentials
+
+
+@router.delete(
+    "/credentials/{credential_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_credential_by_id(
+        credential_id: int,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+) -> None:
+    await credential_crud.delete(unique_id=credential_id)
