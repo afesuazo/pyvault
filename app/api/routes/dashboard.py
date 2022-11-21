@@ -100,4 +100,5 @@ async def delete_credential_by_id(
         credential_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
 ) -> None:
+    print(credential_id)
     await credential_crud.delete(unique_id=credential_id)
