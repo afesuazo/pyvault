@@ -18,6 +18,7 @@ router = APIRouter()
 class Token(BaseModel):
     access_token: str
     token_type: str
+    expiration_time: int
 
 
 async def authenticate_user(username: str, password: str, user_crud: UserCRUD) -> Optional[User]:
@@ -51,7 +52,7 @@ async def login_user(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
-    return Token(access_token=access_token, token_type="bearer")
+    return Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
 
 
 @router.post(
