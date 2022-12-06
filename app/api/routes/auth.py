@@ -64,7 +64,7 @@ async def login_user(
 async def signup_user(
         user_data: UserCreate, user_crud: UserCRUD = Depends(UserCRUD)
 ) -> User:
-    user = user_crud.read(user_data.username)
+    user = await user_crud.read(user_data.username)
     if user is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
