@@ -28,7 +28,7 @@ async def create_site(
 
 
 @router.get(
-    "/sites/",
+    "/sites",
     response_model=List[Site],
     status_code=status.HTTP_200_OK,
 )
@@ -78,7 +78,7 @@ async def read_credential_by_id(
 
 
 @router.get(
-    "/credentials/",
+    "/credentials",
     response_model=List[Credential],
     status_code=status.HTTP_200_OK,
 )

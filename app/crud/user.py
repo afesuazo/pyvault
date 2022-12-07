@@ -34,7 +34,7 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
         user = results.scalar_one_or_none()
         return user
 
-    async def read(self, username: str) -> Optional[User]:
+    async def read_by_username(self, username: str) -> Optional[User]:
         statement = select(User).where(User.username == username)
         results = await self.db_session.execute(statement=statement)
 
