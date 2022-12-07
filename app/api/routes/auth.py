@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
@@ -22,12 +22,18 @@ class Token(BaseModel):
 
 
 async def authenticate_user(username: str, password: str, user_crud: UserCRUD) -> Optional[User]:
-    user: Optional[User] = await (user_crud.read(username=username))
+    user: Optional[User] = await (user_crud.read_by_username(username=username))
     if not user:
         return None
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+@router.get("/all-users")
+async def temp_users(user_crud: UserCRUD = Depends(UserCRUD)) -> list[User]:
+    users = await user_crud.read_many(0, 100)
+    return users
 
 
 @router.post(
@@ -64,7 +70,7 @@ async def login_user(
 async def signup_user(
         user_data: UserCreate, user_crud: UserCRUD = Depends(UserCRUD)
 ) -> User:
-    user = await user_crud.read(user_data.username)
+    user = await user_crud.read_by_username(user_data.username)
     if user is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
