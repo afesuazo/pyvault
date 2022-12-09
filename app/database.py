@@ -18,5 +18,5 @@ class PasswordDB:
         # While testing this will drop and create all tables at startup
         async with self.engine.begin() as conn:
             # TODO: Remove once testing phase is done
-            # await conn.run_sync(SQLModel.metadata.drop_all)
+            await conn.run_sync(SQLModel.metadata.drop_all)
             await conn.run_sync(SQLModel.metadata.create_all)

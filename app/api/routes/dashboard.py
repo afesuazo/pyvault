@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, status, Depends, Query
 
+import db_filler
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
 from app.models.credential import Credential, CredentialCreate
@@ -100,5 +101,9 @@ async def delete_credential_by_id(
         credential_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
 ) -> None:
-    print(credential_id)
     await credential_crud.delete(unique_id=credential_id)
+
+
+@router.get("/debug_setup")
+async def debug_setup() -> None:
+    await db_filler.main()
