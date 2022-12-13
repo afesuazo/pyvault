@@ -13,7 +13,6 @@ users_base = {
 }
 
 friendship_base = {
-    "friendship_state": 1,
     "favorite_state": 0,
     "user_1_id": 1,
     "user_2_id": 2
@@ -61,21 +60,26 @@ def users_credentials_generator():
     yield credential
 
 
-async def main():
+async def add_base_data():
     async with aiohttp.ClientSession() as session:
         for user in users_generator():
             async with session.post(user_creation_url, json=user) as resp:
                 user_response = await resp.json()
                 print(user_response)
 
-        for friendship in users_friendship_generator():
-            async with session.post(user_friendships_url, json=friendship) as resp:
-                friendship_response = await resp.json()
-                print(friendship_response)
-
         for credential in users_credentials_generator():
             async with session.post(user_credentials_url, json=credential) as resp:
                 credential_response = await resp.json()
                 print(credential_response)
+
+        return
+
+
+async def add_friends():
+    async with aiohttp.ClientSession() as session:
+        for friendship in users_friendship_generator():
+            async with session.post(user_friendships_url, json=friendship, auth=aiohttp.BasicAuth("test1", "master")) as resp:
+                friendship_response = await resp.json()
+                print(friendship_response)
 
         return

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.crud.friendship import FriendshipCRUD
 from app.crud.user import UserCRUD
+from app.dependencies.auth import get_current_user
 from app.models.friendship import Friendship, FriendshipCreate
 from app.models.user import UserBase
 
@@ -16,17 +17,29 @@ async def ping() -> dict[str, str]:
 
 
 @router.get("/all")
-async def get_friends(user_id: int, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD), user_crud: UserCRUD = Depends(UserCRUD)) -> List[UserBase]:
-    friendships = await friendship_crud.read_many(0, 100, group_id=user_id)
-    friends = [friendship.user_1_id if friendship.user_1_id != user_id else friendship.user_2_id for friendship in friendships]
+async def get_friends(friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD),
+                      user_crud: UserCRUD = Depends(UserCRUD), user = Depends(get_current_user)) -> List[UserBase]:
+    friendships = await friendship_crud.read_many(0, 500, group_id=user.uid)
+    friends = [friendship.user_1_id if friendship.user_1_id != user.uid else friendship.user_2_id for friendship in
+               friendships]
     users = [await user_crud.read(int(friend)) for friend in friends]
     return users
 
 
 @router.post("/add")
 async def add_friend(
-        friendship_data: FriendshipCreate, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD)
+        friendship_data: FriendshipCreate, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD), user = Depends(get_current_user)
 ) -> Friendship:
+    # Check if friendship exists already
+    friendship = await friendship_crud.read_friend_pair(user.uid, friendship_data.user_2_id)
+    if friendship:
+        return friendship
+
+    if user.uid < friendship_data.user_2_id:
+        friendship_data.friendship_state = 1
+    else:
+        friendship_data.friendship_state = 2
+
     friendship = await friendship_crud.create(friendship_data=friendship_data)
     return friendship
 
@@ -34,5 +47,3 @@ async def add_friend(
 @router.post("/remove")
 async def remove_friend(friendship_id: int, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD)) -> None:
     await friendship_crud.delete(friendship_id)
-
-

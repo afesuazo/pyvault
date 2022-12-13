@@ -106,4 +106,9 @@ async def delete_credential_by_id(
 
 @router.get("/debug_setup")
 async def debug_setup() -> None:
-    await db_filler.main()
+    await db_filler.add_base_data()
+
+
+@router.get("/debug_setup_friends")
+async def debug_setup() -> None:
+    await db_filler.add_friends()

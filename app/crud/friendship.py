@@ -42,6 +42,19 @@ class FriendshipCRUD(BaseCRUD[Friendship, FriendshipCreate, FriendshipUpdate]):
         friendships = [r for r, in results.all()]
         return friendships
 
+    async def read_friend_pair(self, user_1: int, user_2: int) -> Optional[Friendship]:
+        if user_1 < user_2:
+            first_user = user_1
+            second_user = user_2
+        else:
+            first_user = user_2
+            second_user = user_1
+        statement = select(Friendship).where(Friendship.user_1_id == first_user, Friendship.user_2_id == second_user)
+        results = await self.db_session.execute(statement=statement)
+
+        friendship = results.scalar_one_or_none()
+        return friendship
+
     async def update(self, unique_id: int, friendship_data: FriendshipUpdate) -> Friendship:
         friendship = await self.read(unique_id=unique_id)
         assert friendship is not None, f"friendship {unique_id} not found"
