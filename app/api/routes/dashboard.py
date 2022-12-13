@@ -5,6 +5,7 @@ from fastapi import APIRouter, status, Depends, Query
 import db_filler
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
+from app.dependencies.auth import get_current_user
 from app.models.credential import Credential, CredentialCreate
 from app.models.site import Site, SiteCreate
 
@@ -60,8 +61,11 @@ async def read_site_by_id(
     status_code=status.HTTP_201_CREATED
 )
 async def create_credential(
-        credential_data: CredentialCreate, credential_crud: CredentialCRUD = Depends(CredentialCRUD)
+        credential_data: CredentialCreate,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        user=Depends(get_current_user)
 ) -> Credential:
+    credential_data.user_id = user.uid
     credential = await credential_crud.create(credential_data=credential_data)
     return credential
 
@@ -72,9 +76,11 @@ async def create_credential(
     status_code=status.HTTP_200_OK,
 )
 async def read_credential_by_id(
-        credential_id: int, credential_crud: CredentialCRUD = Depends(CredentialCRUD)
+        credential_id: int,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        user=Depends(get_current_user)
 ) -> Optional[Credential]:
-    credential = await credential_crud.read(unique_id=credential_id)
+    credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.uid)
     return credential
 
 
@@ -88,8 +94,9 @@ async def read_credentials(
         limit: int = Query(default=10, lte=50),
         site_id: Optional[int] = None,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        user=Depends(get_current_user)
 ) -> List[Credential]:
-    credentials = await credential_crud.read_many(offset=offset, limit=limit, group_id=site_id)
+    credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id, user_id=user.uid)
     return credentials
 
 
@@ -100,8 +107,11 @@ async def read_credentials(
 async def delete_credential_by_id(
         credential_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        user=Depends(get_current_user)
 ) -> None:
-    await credential_crud.delete(unique_id=credential_id)
+    credential = await credential_crud.read_personal(credential_id, user.uid)
+    if credential:
+        await credential_crud.delete(unique_id=credential_id)
 
 
 @router.get("/debug_setup")
