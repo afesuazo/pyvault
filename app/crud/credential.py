@@ -31,6 +31,25 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
         credential = results.scalar_one_or_none()
         return credential
 
+    async def read_personal(self, unique_id: int, user_id: int) -> Optional[Credential]:
+        statement = select(Credential).where(Credential.uid == unique_id, Credential.user_id == user_id)
+        results = await self.db_session.execute(statement=statement)
+
+        # Scalar one or none allows empty results
+        credential = results.scalar_one_or_none()
+        return credential
+
+    async def read_personal_many(self, offset: int, limit: int, site_id: Optional[int], user_id: Optional[int]) -> List[Credential]:
+        if site_id:
+            statement = select(Credential).where(Credential.site_id == site_id, Credential.user_id == user_id).offset(offset).limit(limit)
+        else:
+            statement = select(Credential).where(Credential.user_id == user_id).offset(offset).limit(limit)
+
+        results = await self.db_session.execute(statement=statement)
+
+        credentials = [r for r, in results.all()]
+        return credentials
+
     async def read_many(self, offset: int, limit: int, group_id: Optional[int]) -> List[Credential]:
         if group_id:
             statement = select(Credential).where(Credential.site_id == group_id).offset(offset).limit(limit)
