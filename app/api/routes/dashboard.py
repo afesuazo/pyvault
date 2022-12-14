@@ -4,9 +4,11 @@ from fastapi import APIRouter, status, Depends, Query
 
 import db_filler
 from app.crud.credential import CredentialCRUD
+from app.crud.shared_credential import SharedCredentialCRUD
 from app.crud.site import SiteCRUD
 from app.dependencies.auth import get_current_user
-from app.models.credential import Credential, CredentialCreate
+from app.models.credential import Credential, CredentialCreate, CredentialUpdate, SharedCredential, \
+    SharedCredentialCreate
 from app.models.site import Site, SiteCreate
 
 router = APIRouter()
@@ -96,7 +98,8 @@ async def read_credentials(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> List[Credential]:
-    credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id, user_id=user.uid)
+    credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
+                                                           user_id=user.uid)
     return credentials
 
 
@@ -112,6 +115,26 @@ async def delete_credential_by_id(
     credential = await credential_crud.read_personal(credential_id, user.uid)
     if credential:
         await credential_crud.delete(unique_id=credential_id)
+
+
+@router.patch(
+    "/credentials/share/{credential_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def share_credential_by_id(
+        credential_id: int,
+        friend_id: int,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
+        user=Depends(get_current_user)
+) -> SharedCredential:
+    credential = await credential_crud.read_personal(credential_id, user.uid)
+    if credential:
+        # Check if already shared with friend
+        shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id)
+        if not shared_credential:
+            shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.uid, guest_id=friend_id)
+            return await shared_credential_crud.create(shared_credential)
 
 
 @router.get("/debug_setup")
