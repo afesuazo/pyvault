@@ -14,7 +14,7 @@ class CredentialBase(SQLModel):
 
     user_id: int = Field(foreign_key="users.uid")
     user: Optional[UserBase] = Relationship(back_populates="credentials")
-    site_id: Optional[int] = Field(default=None, foreign_key="sites.uid")
+    site_id: Optional[int] = Field(default=0, foreign_key="sites.uid")
 
 
 class Credential(CredentialBase, table=True):

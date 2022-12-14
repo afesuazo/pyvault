@@ -23,8 +23,8 @@ credential_base = {
     "email": "test@gmail.com",
     "username": "testUsername",
     "password": "testPassword",
-    "user_id": 0,
-    "site_id": 0
+    "user_id": 1,
+    "site_id": 1
 }
 
 

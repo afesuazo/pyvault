@@ -45,5 +45,6 @@ async def add_friend(
 
 
 @router.post("/remove")
-async def remove_friend(friendship_id: int, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD)) -> None:
-    await friendship_crud.delete(friendship_id)
+async def remove_friend(friend_id: int, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD), user = Depends(get_current_user)) -> None:
+    friendship = await friendship_crud.read_friend_pair(user.uid, friend_id)
+    await friendship_crud.delete(friendship.uid)
