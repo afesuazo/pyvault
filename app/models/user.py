@@ -12,8 +12,6 @@ class UserBase(SQLModel):
     hashed_password: str
     is_active: bool = Field(default=True)
 
-    credentials: List["CredentialBase"] = Relationship(back_populates="user")
-
 
 class User(UserBase, table=True):
     __tablename__ = "users"
