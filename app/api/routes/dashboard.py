@@ -73,6 +73,28 @@ async def create_credential(
 
 
 @router.get(
+    "/credentials/shared",
+    response_model=List[Credential],
+    status_code=status.HTTP_200_OK,
+)
+async def read_shared_credentials(
+        offset: int = 0,
+        limit: int = Query(default=10, lte=50),
+        friend_id: Optional[int] = None,
+        owned: Optional[bool] = False,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
+        user=Depends(get_current_user)
+) -> List[Credential]:
+    shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user.uid, friend_id, owned)
+    credentials = []
+    if shared_credentials:
+        credential_ids = [credential.credential_id for credential in shared_credentials]
+        credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
+    return credentials
+
+
+@router.get(
     "/credentials/{credential_id}",
     response_model=Optional[Credential],
     status_code=status.HTTP_200_OK,
@@ -133,7 +155,8 @@ async def share_credential_by_id(
         # Check if already shared with friend
         shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id)
         if not shared_credential:
-            shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.uid, guest_id=friend_id)
+            shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.uid,
+                                                       guest_id=friend_id)
             return await shared_credential_crud.create(shared_credential)
 
 
