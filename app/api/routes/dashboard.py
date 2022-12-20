@@ -90,6 +90,7 @@ async def read_shared_credentials(
     credentials = []
     if shared_credentials:
         credential_ids = [credential.credential_id for credential in shared_credentials]
+        # TODO: Check for empty results
         credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
     return credentials
 
@@ -137,11 +138,14 @@ async def delete_credential_by_id(
     credential = await credential_crud.read_personal(credential_id, user.uid)
     if credential:
         await credential_crud.delete(unique_id=credential_id)
+    else:
+        return status.HTTP_404_NOT_FOUND
 
 
 @router.patch(
-    "/credentials/share/{credential_id}",
+    "/credentials/shared/{credential_id}",
     status_code=status.HTTP_200_OK,
+    response_model=SharedCredential
 )
 async def share_credential_by_id(
         credential_id: int,
@@ -153,11 +157,30 @@ async def share_credential_by_id(
     credential = await credential_crud.read_personal(credential_id, user.uid)
     if credential:
         # Check if already shared with friend
-        shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id)
+        shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id, credential_id)
         if not shared_credential:
             shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.uid,
                                                        guest_id=friend_id)
             return await shared_credential_crud.create(shared_credential)
+
+        return shared_credential
+
+
+@router.delete(
+    "/credentials/shared/{shared_credential_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_credential_by_id(
+        shared_credential_id: int,
+        shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
+        user=Depends(get_current_user)
+) -> None:
+    shared_credential = await shared_credential_crud.read_personal(shared_credential_id, user.uid)
+    if shared_credential:
+        await shared_credential_crud.delete(unique_id=shared_credential_id)
+    else:
+        return status.HTTP_404_NOT_FOUND
+
 
 
 @router.get("/debug_setup")

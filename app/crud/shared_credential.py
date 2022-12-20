@@ -2,7 +2,6 @@ from typing import Optional, List
 
 from fastapi import Depends
 from sqlalchemy import delete, select
-from sqlmodel import or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
@@ -32,7 +31,7 @@ class SharedCredentialCRUD(BaseCRUD[SharedCredential, SharedCredentialCreate, Sh
         shared_credential = results.scalar_one_or_none()
         return shared_credential
 
-    async def read_personal(self, unique_id: int, user_id: int, friend_id: Optional[int]) -> Optional[SharedCredential]:
+    async def read_personal(self, unique_id: int, user_id: int) -> Optional[SharedCredential]:
         statement = select(SharedCredential).where(SharedCredential.uid == unique_id, SharedCredential.owner_id == user_id)
         results = await self.db_session.execute(statement=statement)
 
@@ -40,15 +39,15 @@ class SharedCredentialCRUD(BaseCRUD[SharedCredential, SharedCredentialCreate, Sh
         shared_credential = results.scalar_one_or_none()
         return shared_credential
 
-    async def read_pair_personal(self, user_id: int, friend_id: int) -> Optional[SharedCredential]:
-        statement = select(SharedCredential).where(SharedCredential.guest_id == friend_id, SharedCredential.owner_id == user_id)
+    async def read_pair_personal(self, user_id: int, friend_id: int, credential_id: int) -> Optional[SharedCredential]:
+        statement = select(SharedCredential).where(SharedCredential.guest_id == friend_id, SharedCredential.owner_id == user_id, SharedCredential.credential_id == credential_id)
         results = await self.db_session.execute(statement=statement)
 
         # Scalar one or none allows empty results
         shared_credential = results.scalar_one_or_none()
         return shared_credential
 
-    async def read_personal_many(self, offset: int, limit: int, user_id: int, friend_id: Optional[int], owner: bool = True) -> List[SharedCredential]:
+    async def read_personal_many(self, offset: int, limit: int, user_id: int, friend_id: Optional[int], credential_id: Optional[int], owner: bool = True) -> List[SharedCredential]:
         if friend_id:
             if not owner:
                 statement = select(SharedCredential).where(SharedCredential.owner_id == friend_id, SharedCredential.guest_id == user_id).offset(offset).limit(limit)
@@ -60,8 +59,10 @@ class SharedCredentialCRUD(BaseCRUD[SharedCredential, SharedCredentialCreate, Sh
             else:
                 statement = select(SharedCredential).where(SharedCredential.owner_id == user_id).offset(offset).limit(limit)
 
-        results = await self.db_session.execute(statement=statement)
+            if credential_id:
+                statement.where(SharedCredential.credential_id == credential_id)
 
+        results = await self.db_session.execute(statement=statement)
         shared_credentials = [r for r, in results.all()]
         return shared_credentials
 
