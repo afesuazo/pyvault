@@ -55,12 +55,18 @@ class SharedCredentialCRUD(BaseCRUD[SharedCredential, SharedCredentialCreate, Sh
                 statement = select(SharedCredential).where(SharedCredential.owner_id == user_id, SharedCredential.guest_id == friend_id).offset(offset).limit(limit)
         else:
             if not owner:
-                statement = select(SharedCredential).where(SharedCredential.guest_id == user_id).offset(offset).limit(limit)
+                if credential_id:
+                    statement = select(SharedCredential).where(SharedCredential.guest_id == user_id, SharedCredential.credential_id == credential_id).offset(
+                        offset).limit(limit)
+                else:
+                    statement = select(SharedCredential).where(SharedCredential.guest_id == user_id).offset(
+                        offset).limit(limit)
             else:
-                statement = select(SharedCredential).where(SharedCredential.owner_id == user_id).offset(offset).limit(limit)
-
-            if credential_id:
-                statement.where(SharedCredential.credential_id == credential_id)
+                if credential_id:
+                    statement = select(SharedCredential).where(SharedCredential.owner_id == user_id, SharedCredential.credential_id == credential_id).offset(
+                        offset).limit(limit)
+                else:
+                    statement = select(SharedCredential).where(SharedCredential.owner_id == user_id).offset(offset).limit(limit)
 
         results = await self.db_session.execute(statement=statement)
         shared_credentials = [r for r, in results.all()]

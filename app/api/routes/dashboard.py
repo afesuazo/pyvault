@@ -99,7 +99,7 @@ async def read_shared_credentials(
 
 
 @router.get(
-    "/credentials/share/{credential_id}/users",
+    "/credentials/shared/{credential_id}/users",
     response_model=List[UserBase],
     status_code=status.HTTP_200_OK,
 )
