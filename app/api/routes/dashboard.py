@@ -6,10 +6,12 @@ import db_filler
 from app.crud.credential import CredentialCRUD
 from app.crud.shared_credential import SharedCredentialCRUD
 from app.crud.site import SiteCRUD
+from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.models.credential import Credential, CredentialCreate, CredentialUpdate, SharedCredential, \
     SharedCredentialCreate
 from app.models.site import Site, SiteCreate
+from app.models.user import UserBase
 
 router = APIRouter()
 
@@ -86,13 +88,34 @@ async def read_shared_credentials(
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
         user=Depends(get_current_user)
 ) -> List[Credential]:
-    shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user.uid, friend_id, owned)
+    shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user_id=user.uid,
+                                                                         friend_id=friend_id, owner=owned, credential_id=None)
     credentials = []
     if shared_credentials:
         credential_ids = [credential.credential_id for credential in shared_credentials]
         # TODO: Check for empty results
         credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
     return credentials
+
+
+@router.get(
+    "/credentials/share/{credential_id}/users",
+    response_model=List[UserBase],
+    status_code=status.HTTP_200_OK,
+)
+async def read_shared_credentials_users(
+        credential_id: int,
+        user_crud: UserCRUD = Depends(UserCRUD),
+        shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
+        user=Depends(get_current_user)
+) -> List[Credential]:
+    shared_credentials = await shared_credential_crud.read_personal_many(0, 200, user.uid, friend_id=None, owner=True,
+                                                                         credential_id=credential_id)
+    users = []
+    if shared_credentials:
+        user_ids = [credential.guest_id for credential in shared_credentials]
+        users = [await user_crud.read(int(user_id)) for user_id in user_ids]
+    return users
 
 
 @router.get(
@@ -180,7 +203,6 @@ async def delete_credential_by_id(
         await shared_credential_crud.delete(unique_id=shared_credential_id)
     else:
         return status.HTTP_404_NOT_FOUND
-
 
 
 @router.get("/debug_setup")
