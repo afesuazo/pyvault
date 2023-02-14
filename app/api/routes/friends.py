@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 
@@ -28,12 +28,19 @@ async def get_friends(friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD),
 
 @router.post("/add")
 async def add_friend(
-        friendship_data: FriendshipCreate, friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD), user = Depends(get_current_user)
-) -> Friendship:
+        friendship_data: FriendshipCreate,
+        friendship_crud: FriendshipCRUD = Depends(FriendshipCRUD),
+        user_crud: UserCRUD = Depends(UserCRUD),
+        user = Depends(get_current_user)
+) -> Optional[Friendship]:
     # Check if friendship exists already
     friendship = await friendship_crud.read_friend_pair(user.uid, friendship_data.user_2_id)
     if friendship:
         return friendship
+
+    friend_user = await user_crud.read(friendship_data.user_2_id)
+    if friend_user is None:
+        return
 
     if user.uid < friendship_data.user_2_id:
         friendship_data.friendship_state = 1
