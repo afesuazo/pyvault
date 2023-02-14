@@ -63,7 +63,7 @@ async def login_user(
     )
 
     crypt_key = generate_master_key(form_data.password + SALT_1.decode())
-    await redis.execute_command('set', str(user.uid), crypt_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES)
+    await redis.execute_command('set', str(user.uid), crypt_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES*60)
     return Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
 
 
