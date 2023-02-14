@@ -5,12 +5,14 @@ from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from pydantic import BaseModel
+from fastapi.requests import Request
 
 from app.api.auth_utils import verify_password, create_access_token
+from app.api.cypt_utils import generate_master_key
 from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.models.user import UserCreate, User
-from config import ACCESS_TOKEN_EXPIRE_MINUTES
+from config import ACCESS_TOKEN_EXPIRE_MINUTES, SALT_1
 
 router = APIRouter()
 
@@ -43,6 +45,7 @@ async def temp_users(user_crud: UserCRUD = Depends(UserCRUD)) -> list[User]:
     status_code=status.HTTP_200_OK
 )
 async def login_user(
+        request: Request,
         form_data: OAuth2PasswordRequestForm = Depends(),
         user_crud: UserCRUD = Depends(UserCRUD)
 ) -> Token:
@@ -58,6 +61,7 @@ async def login_user(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
+    request.session['crypt_key'] = generate_master_key(form_data.password + SALT_1.decode()).hex()
     return Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
 
 
