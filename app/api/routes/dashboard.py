@@ -1,7 +1,7 @@
 from typing import Optional, List
 
+from aioredis import Redis
 from fastapi import APIRouter, status, Depends, Query
-from fastapi.requests import Request
 
 import db_filler
 from app.api.cypt_utils import decrypt, encrypt
@@ -11,6 +11,7 @@ from app.crud.shared_credential import SharedCredentialCRUD
 from app.crud.site import SiteCRUD
 from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
+from app.dependencies.redis import get_redis
 from app.models.credential import Credential, CredentialCreate, SharedCredential, SharedCredentialCreate
 from app.models.site import Site, SiteCreate
 from app.models.user import UserBase, User
@@ -67,13 +68,14 @@ async def read_site_by_id(
     status_code=status.HTTP_201_CREATED
 )
 async def create_credential(
-        request: Request,
         credential_data: CredentialCreate,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
-        user=Depends(get_current_user)
+        user=Depends(get_current_user),
+        redis: Redis = Depends(get_redis)
 ) -> Credential:
     credential_data.user_id = user.uid
-    credential_data.password = encrypt(bytes.fromhex(request.session["crypt_key"]), credential_data.password).hex()
+    crypt_key = await redis.get(str(user.uid))
+    credential_data.password = encrypt(crypt_key, credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
     return credential
 
@@ -84,14 +86,14 @@ async def create_credential(
     status_code=status.HTTP_200_OK,
 )
 async def read_shared_credentials(
-        request: Request,
         offset: int = 0,
         limit: int = Query(default=10, lte=50),
         friend_id: Optional[int] = None,
         owned: Optional[bool] = False,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
-        user=Depends(get_current_user)
+        user=Depends(get_current_user),
+        redis: Redis = Depends(get_redis)
 ) -> List[Credential]:
     shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user_id=user.uid,
                                                                          friend_id=friend_id, owner=owned, credential_id=None)
@@ -101,8 +103,9 @@ async def read_shared_credentials(
         # TODO: Check for empty results
         credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
 
+    crypt_key = await redis.get(str(user.uid))
     for cred in credentials:
-        cred.password = decrypt(bytes.fromhex(request.session["crypt_key"]), cred.password)
+        cred.password = decrypt(crypt_key, cred.password)
 
     return credentials
 
@@ -133,13 +136,14 @@ async def read_shared_credentials_users(
     status_code=status.HTTP_200_OK,
 )
 async def read_credential_by_id(
-        request: Request,
         credential_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
-        user=Depends(get_current_user)
+        user=Depends(get_current_user),
+        redis: Redis = Depends(get_redis)
 ) -> Optional[Credential]:
     credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.uid)
-    credential.password = decrypt(bytes.fromhex(request.session["crypt_key"]), credential.password)
+    crypt_key = await redis.get(str(user.uid))
+    credential.password = decrypt(crypt_key, credential.password)
     return credential
 
 
@@ -149,17 +153,18 @@ async def read_credential_by_id(
     status_code=status.HTTP_200_OK,
 )
 async def read_credentials(
-        request: Request,
         offset: int = 0,
         limit: int = Query(default=10, lte=50),
         site_id: Optional[int] = None,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
-        user=Depends(get_current_user)
+        user=Depends(get_current_user),
+        redis: Redis = Depends(get_redis)
 ) -> List[Credential]:
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
                                                            user_id=user.uid)
+    crypt_key = await redis.get(str(user.uid))
     for cred in credentials:
-        cred.password = decrypt(bytes.fromhex(request.session["crypt_key"]), cred.password)
+        cred.password = decrypt(crypt_key, cred.password)
     return credentials
 
 
