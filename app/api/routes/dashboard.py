@@ -1,17 +1,19 @@
 from typing import Optional, List
 
 from fastapi import APIRouter, status, Depends, Query
+from fastapi.requests import Request
 
 import db_filler
+from app.api.cypt_utils import decrypt, encrypt
 from app.crud.credential import CredentialCRUD
+from app.crud.friendship import FriendshipCRUD
 from app.crud.shared_credential import SharedCredentialCRUD
 from app.crud.site import SiteCRUD
 from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
-from app.models.credential import Credential, CredentialCreate, CredentialUpdate, SharedCredential, \
-    SharedCredentialCreate
+from app.models.credential import Credential, CredentialCreate, SharedCredential, SharedCredentialCreate
 from app.models.site import Site, SiteCreate
-from app.models.user import UserBase
+from app.models.user import UserBase, User
 
 router = APIRouter()
 
@@ -65,11 +67,13 @@ async def read_site_by_id(
     status_code=status.HTTP_201_CREATED
 )
 async def create_credential(
+        request: Request,
         credential_data: CredentialCreate,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> Credential:
     credential_data.user_id = user.uid
+    credential_data.password = encrypt(bytes.fromhex(request.session["crypt_key"]), credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
     return credential
 
@@ -80,6 +84,7 @@ async def create_credential(
     status_code=status.HTTP_200_OK,
 )
 async def read_shared_credentials(
+        request: Request,
         offset: int = 0,
         limit: int = Query(default=10, lte=50),
         friend_id: Optional[int] = None,
@@ -95,6 +100,10 @@ async def read_shared_credentials(
         credential_ids = [credential.credential_id for credential in shared_credentials]
         # TODO: Check for empty results
         credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
+
+    for cred in credentials:
+        cred.password = decrypt(bytes.fromhex(request.session["crypt_key"]), cred.password)
+
     return credentials
 
 
@@ -108,7 +117,7 @@ async def read_shared_credentials_users(
         user_crud: UserCRUD = Depends(UserCRUD),
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
         user=Depends(get_current_user)
-) -> List[Credential]:
+) -> List[User]:
     shared_credentials = await shared_credential_crud.read_personal_many(0, 200, user.uid, friend_id=None, owner=True,
                                                                          credential_id=credential_id)
     users = []
@@ -124,11 +133,13 @@ async def read_shared_credentials_users(
     status_code=status.HTTP_200_OK,
 )
 async def read_credential_by_id(
+        request: Request,
         credential_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> Optional[Credential]:
     credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.uid)
+    credential.password = decrypt(bytes.fromhex(request.session["crypt_key"]), credential.password)
     return credential
 
 
@@ -138,6 +149,7 @@ async def read_credential_by_id(
     status_code=status.HTTP_200_OK,
 )
 async def read_credentials(
+        request: Request,
         offset: int = 0,
         limit: int = Query(default=10, lte=50),
         site_id: Optional[int] = None,
@@ -146,6 +158,8 @@ async def read_credentials(
 ) -> List[Credential]:
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
                                                            user_id=user.uid)
+    for cred in credentials:
+        cred.password = decrypt(bytes.fromhex(request.session["crypt_key"]), cred.password)
     return credentials
 
 
@@ -168,17 +182,23 @@ async def delete_credential_by_id(
 @router.patch(
     "/credentials/shared/{credential_id}",
     status_code=status.HTTP_200_OK,
-    response_model=SharedCredential
+    response_model=Optional[SharedCredential]
 )
 async def share_credential_by_id(
         credential_id: int,
         friend_id: int,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
+        friend_crud: FriendshipCRUD = Depends(FriendshipCRUD),
         user=Depends(get_current_user)
-) -> SharedCredential:
+) -> Optional[SharedCredential]:
     credential = await credential_crud.read_personal(credential_id, user.uid)
     if credential:
+        # TODO: Better response object to eliminate nesting
+        # Check if friend exists
+        friendship = await friend_crud.read_friend_pair(user.uid, int(friend_id))
+        if friendship is None:
+            return
         # Check if already shared with friend
         shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id, credential_id)
         if not shared_credential:
