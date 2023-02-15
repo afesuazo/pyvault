@@ -1,10 +1,10 @@
+import config
+
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel  # noqa  # Imported here to gather model metadata
 
-# Using a local file at the time, will migrate to postgresql
-# TODO: Move to config.toml when production DB is added
-DATABASE_URL = f"sqlite+aiosqlite:///passwords.db"
+DATABASE_URL = config.DB_URL
 
 
 class PasswordDB:
