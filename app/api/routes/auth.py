@@ -76,11 +76,23 @@ async def login_user(
 async def signup_user(
         user_data: UserCreate, user_crud: UserCRUD = Depends(UserCRUD)
 ) -> User:
-    user = await user_crud.read_by_username(user_data.username)
-    if user is not None:
+    user_username = await user_crud.read_by_username(user_data.username)
+    if user_username is not None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this username already exist"
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                'msg': "User with this username already exist",
+                'field': 'username'
+            }
+        )
+    user_email = await user_crud.read_by_email(user_data.email)
+    if user_email is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                'msg': "User with this email already exist",
+                'field': 'email'
+            }
         )
     user = await user_crud.create(user_data=user_data)
     return user
