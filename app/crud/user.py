@@ -15,6 +15,8 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
         self.db_session = db_session
 
     async def create(self, user_data: UserCreate) -> User:
+        user_data.first_name = user_data.first_name.title()
+        user_data.last_name = user_data.last_name.title()
         user_dict = user_data.dict()
         user = User(**user_dict)
 
