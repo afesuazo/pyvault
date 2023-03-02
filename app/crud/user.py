@@ -44,6 +44,14 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
         user = results.scalar_one_or_none()
         return user
 
+    async def read_by_email(self, email: str) -> Optional[User]:
+        statement = select(User).where(User.email == email)
+        results = await self.db_session.execute(statement=statement)
+
+        # Scalar one or none allows empty results
+        user = results.scalar_one_or_none()
+        return user
+
     async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[User]:
         statement = select(User).offset(offset).limit(limit)
         results = await self.db_session.execute(statement=statement)
