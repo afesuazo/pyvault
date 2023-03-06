@@ -1,3 +1,3 @@
 #!/bin/bash
 
-gunicorn app.main:app -k uvicorn.workers.UvicornWorker
+gunicorn -c gunicorn_conf.py app.main:app 
