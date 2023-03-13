@@ -54,7 +54,9 @@ async def login_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail={
+                'msg': "Incorrect username & password combination",
+            }
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
