@@ -42,14 +42,13 @@ async def temp_users(user_crud: UserCRUD = Depends(UserCRUD)) -> list[User]:
 @router.post(
     "/login",
     summary="Login user and assign token",
-    response_model=Token,
     status_code=status.HTTP_200_OK
 )
 async def login_user(
         form_data: OAuth2PasswordRequestForm = Depends(),
         user_crud: UserCRUD = Depends(UserCRUD),
         redis: Redis = Depends(get_redis)
-) -> Token:
+):
     user: Optional[User] = await authenticate_user(form_data.username, form_data.password, user_crud)
     if not user:
         raise HTTPException(
@@ -66,7 +65,17 @@ async def login_user(
 
     crypt_key = generate_master_key(form_data.password + SALT_1.decode())
     await redis.execute_command('set', str(user.uid), crypt_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES*60)
-    return Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
+
+    token = Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
+
+    response  = {
+        **user.dict(),
+        **token.dict()
+    }
+    print(response)
+
+    # Return user details and token
+    return response
 
 
 @router.post(

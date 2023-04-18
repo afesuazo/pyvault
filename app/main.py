@@ -9,7 +9,7 @@ def build_app() -> FastAPI:
     application = FastAPI(title="Password Manager", debug=True, version="1.0")
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["127.0.0.1"],
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
