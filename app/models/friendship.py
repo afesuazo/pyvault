@@ -8,8 +8,8 @@ from sqlmodel import Field, SQLModel
 class FriendshipBase(SQLModel):
     friendship_state: int = Field(default=0)
 
-    user_1_id: int = Field(foreign_key="users.uid")
-    user_2_id: int = Field(foreign_key="users.uid")
+    user_1_id: int = Field(foreign_key="user.uid")
+    user_2_id: int = Field(foreign_key="user.uid")
 
 
 class Friendship(FriendshipBase, table=True):

@@ -1,9 +1,12 @@
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional
 
 from sqlmodel import Field, SQLModel, Relationship
 
 
 # Data only model
+from app.models.site import SiteRead
+
 
 class CredentialBase(SQLModel):
     nickname: str = Field(index=True, unique=True)
@@ -11,32 +14,38 @@ class CredentialBase(SQLModel):
     username: Optional[str] = Field(default=None)
     password: str
 
-    user_id: int = Field(foreign_key="users.uid")
-    site_id: Optional[int] = Field(default=0, foreign_key="sites.uid")
-
 
 class Credential(CredentialBase, table=True):
-    __tablename__ = "credentials"
+    __tablename__ = "credential"
 
     uid: Optional[int] = Field(default=None, primary_key=True, index=True)
+    user_id: int = Field(foreign_key="user.uid")
+    created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
+    favorite: bool = Field(default=False)
+    site: Optional["Site"] = Relationship(back_populates="credentials")
+    site_id: Optional[int] = Field(foreign_key="site.uid", nullable=True)
 
 
 # Created to differentiate from Base in docs
-
-
 class CredentialCreate(CredentialBase):
-    pass
+    user_id: int
+    site_id: Optional[int]
 
 
 class CredentialUpdate(CredentialBase):
-    pass
+    favorite: bool
+
+
+class CredentialRead(CredentialBase):
+    created_at: datetime
+    site: Optional[SiteRead]
 
 
 class SharedCredentialBase(SQLModel):
-    credential_id: int = Field(foreign_key="credentials.uid")
+    credential_id: int = Field(foreign_key="credential.uid")
 
-    owner_id: int = Field(foreign_key="users.uid")
-    guest_id: int = Field(foreign_key="users.uid")
+    owner_id: int = Field(foreign_key="user.uid")
+    guest_id: int = Field(foreign_key="user.uid")
 
 
 class SharedCredential(SharedCredentialBase, table=True):
