@@ -12,7 +12,7 @@ from app.api.cypt_utils import generate_master_key
 from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis import get_redis
-from app.models.user import UserCreate, User
+from app.models.user import UserCreate, User, UserRead
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, SALT_1
 
 router = APIRouter()
@@ -64,15 +64,14 @@ async def login_user(
     )
 
     crypt_key = generate_master_key(form_data.password + SALT_1.decode())
-    await redis.execute_command('set', str(user.uid), crypt_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES*60)
+    await redis.execute_command('set', str(user.uid), crypt_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
     token = Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expires.seconds)
 
-    response  = {
+    response = {
         **user.dict(),
         **token.dict()
     }
-    print(response)
 
     # Return user details and token
     return response
@@ -81,12 +80,12 @@ async def login_user(
 @router.post(
     "/signup",
     summary="Create new user",
-    response_model=User,
+    response_model=UserRead,
     status_code=status.HTTP_201_CREATED
 )
 async def signup_user(
         user_data: UserCreate, user_crud: UserCRUD = Depends(UserCRUD)
-) -> User:
+) -> UserRead:
     user_username = await user_crud.read_by_username(user_data.username)
     if user_username is not None:
         raise HTTPException(
@@ -106,7 +105,8 @@ async def signup_user(
             }
         )
     user = await user_crud.create(user_data=user_data)
-    return user
+    user_read = UserRead(**user.dict())
+    return user_read
 
 
 @router.get(

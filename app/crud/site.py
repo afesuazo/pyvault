@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from fastapi import Depends
 from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
@@ -24,7 +25,7 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         return site
 
     async def read(self, unique_id: int) -> Optional[Site]:
-        statement = select(Site).where(Site.uid == unique_id)
+        statement = select(Site).where(Site.uid == unique_id).options(selectinload(Site.credentials))
         results = await self.db_session.execute(statement=statement)
 
         # Scalar one or none allows empty results
@@ -32,7 +33,7 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         return site
 
     async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[Site]:
-        statement = select(Site).offset(offset).limit(limit)
+        statement = select(Site).offset(offset).limit(limit).options(selectinload(Site.credentials))
         results = await self.db_session.execute(statement=statement)
 
         sites = [r for r, in results.all()]

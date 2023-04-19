@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from fastapi import Depends
 from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud.base import BaseCRUD
@@ -24,7 +25,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
         return credential
 
     async def read(self, unique_id: int) -> Optional[Credential]:
-        statement = select(Credential).where(Credential.uid == unique_id)
+        statement = select(Credential).where(Credential.uid == unique_id).options(selectinload(Credential.site))
         results = await self.db_session.execute(statement=statement)
 
         # Scalar one or none allows empty results
@@ -32,7 +33,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
         return credential
 
     async def read_personal(self, unique_id: int, user_id: int) -> Optional[Credential]:
-        statement = select(Credential).where(Credential.uid == unique_id, Credential.user_id == user_id)
+        statement = select(Credential).where(Credential.uid == unique_id, Credential.user_id == user_id).options(selectinload(Credential.site))
         results = await self.db_session.execute(statement=statement)
 
         # Scalar one or none allows empty results
@@ -41,9 +42,9 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
 
     async def read_personal_many(self, offset: int, limit: int, site_id: Optional[int], user_id: Optional[int]) -> List[Credential]:
         if site_id:
-            statement = select(Credential).where(Credential.site_id == site_id, Credential.user_id == user_id).offset(offset).limit(limit)
+            statement = select(Credential).where(Credential.site_id == site_id, Credential.user_id == user_id).offset(offset).limit(limit).options(selectinload(Credential.site))
         else:
-            statement = select(Credential).where(Credential.user_id == user_id).offset(offset).limit(limit)
+            statement = select(Credential).where(Credential.user_id == user_id).offset(offset).limit(limit).options(selectinload(Credential.site))
 
         results = await self.db_session.execute(statement=statement)
 
@@ -52,7 +53,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
 
     async def read_many(self, offset: int, limit: int, group_id: Optional[int]) -> List[Credential]:
         if group_id:
-            statement = select(Credential).where(Credential.site_id == group_id).offset(offset).limit(limit)
+            statement = select(Credential).where(Credential.site_id == group_id).offset(offset).limit(limit).options(selectinload(Credential.site))
         else:
             statement = select(Credential).offset(offset).limit(limit)
         results = await self.db_session.execute(statement=statement)
