@@ -13,8 +13,8 @@ from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis import get_redis
 from app.models.user import UserBase, User
-from app.models.site import SiteCreate, SiteRead
-from app.models.credential import CredentialCreate, SharedCredential, SharedCredentialCreate, CredentialRead
+from app.models.site import SiteCreate, SiteRead, Site
+from app.models.credential import CredentialCreate, SharedCredential, SharedCredentialCreate, CredentialRead, Credential
 
 router = APIRouter()
 
@@ -31,10 +31,9 @@ async def ping() -> dict[str, str]:
 )
 async def create_site(
         site_data: SiteCreate, site_crud: SiteCRUD = Depends(SiteCRUD)
-) -> SiteRead:
+) -> Site:
     site = await site_crud.create(site_data=site_data)
-    site_read = SiteRead(**site.dict())
-    return site_read
+    return site
 
 
 @router.get(
@@ -46,10 +45,10 @@ async def read_sites(
         offset: int = 0,
         limit: int = Query(default=50, lte=50),
         site_crud: SiteCRUD = Depends(SiteCRUD),
-) -> List[SiteRead]:
+) -> List[Site]:
     sites = await site_crud.read_many(offset=offset, limit=limit)
-    sites_read = [SiteRead(**site.dict()) for site in sites]
-    return sites_read
+    return sites
+
 
 @router.get(
     "/sites/{site_id}",
@@ -58,7 +57,7 @@ async def read_sites(
 )
 async def read_site_by_id(
         site_id: int, sites: SiteCRUD = Depends(SiteCRUD)
-) -> Optional[SiteRead]:
+) -> Optional[Site]:
     site = await sites.read(unique_id=site_id)
     return site
 
@@ -73,14 +72,13 @@ async def create_credential(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
-) -> CredentialRead:
+) -> Credential:
     credential_data.user_id = user.uid
     crypt_key = await redis.get(str(user.uid))
     credential_data.password = encrypt(crypt_key, credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
 
-    credential_read = CredentialRead(**credential.dict())
-    return credential_read
+    return credential
 
 
 @router.get(
@@ -97,9 +95,10 @@ async def read_shared_credentials(
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
-) -> List[CredentialRead]:
+) -> List[Credential]:
     shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user_id=user.uid,
-                                                                         friend_id=friend_id, owner=owned, credential_id=None)
+                                                                         friend_id=friend_id, owner=owned,
+                                                                         credential_id=None)
     credentials = []
     if shared_credentials:
         credential_ids = [credential.credential_id for credential in shared_credentials]
@@ -110,8 +109,7 @@ async def read_shared_credentials(
     for cred in credentials:
         cred.password = decrypt(crypt_key, cred.password)
 
-    credentials_read = [CredentialRead(**cred.dict()) for cred in credentials]
-    return credentials_read
+    return credentials
 
 
 @router.get(
@@ -144,12 +142,11 @@ async def read_credential_by_id(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
-) -> Optional[CredentialRead]:
+) -> Optional[Credential]:
     credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.uid)
     crypt_key = await redis.get(str(user.uid))
     credential.password = decrypt(crypt_key, credential.password)
-    credential_read = CredentialRead(**credential.dict())
-    return credential_read
+    return credential
 
 
 @router.get(
@@ -164,7 +161,7 @@ async def read_credentials(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
-) -> list[CredentialRead]:
+) -> list[Credential]:
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
                                                            user_id=user.uid)
     crypt_key = await redis.get(str(user.uid))
@@ -172,9 +169,7 @@ async def read_credentials(
     for cred in credentials:
         cred.password = decrypt(crypt_key, cred.password)
 
-    credentials_read = [CredentialRead(**cred.dict()) for cred in credentials]
-
-    return credentials_read
+    return credentials
 
 
 @router.delete(

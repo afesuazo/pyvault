@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 
 
 # Data only model
@@ -15,7 +15,7 @@ class Site(SiteBase, table=True):
     uid: Optional[int] = Field(default=None, primary_key=True, index=True)
 
     # TODO: Add if sites get tied to each user
-    # credentials: list["Credential"] = Relationship(back_populates="site", sa_relationship_kwargs={"cascade": "delete"})
+    credentials: list["Credential"] = Relationship(back_populates="site", sa_relationship_kwargs={"cascade": "delete", 'lazy': 'selectin'})
 
 
 # Created to differentiate from Base in docs
