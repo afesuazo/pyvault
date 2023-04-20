@@ -38,9 +38,8 @@ class CredentialUpdate(CredentialBase):
 
 class CredentialRead(CredentialBase):
     created_at: datetime
-    site: SiteRead
     uid: int
-
+    site: Optional[SiteRead]
 
 class SharedCredentialBase(SQLModel):
     credential_id: int = Field(foreign_key="credential.uid")

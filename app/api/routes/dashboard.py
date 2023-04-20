@@ -13,7 +13,7 @@ from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis import get_redis
 from app.models.user import UserBase, User
-from app.models.site import SiteCreate, SiteRead, Site
+from app.models.site import SiteCreate, SiteRead, Site, SiteSimpleRead
 from app.models.credential import CredentialCreate, SharedCredential, SharedCredentialCreate, CredentialRead, Credential
 
 router = APIRouter()
@@ -39,6 +39,20 @@ async def create_site(
 @router.get(
     "/sites",
     response_model=List[SiteRead],
+    status_code=status.HTTP_200_OK,
+)
+async def read_sites(
+        offset: int = 0,
+        limit: int = Query(default=50, lte=50),
+        site_crud: SiteCRUD = Depends(SiteCRUD),
+) -> List[Site]:
+    sites = await site_crud.read_many(offset=offset, limit=limit)
+    return sites
+
+
+@router.get(
+    "/sites/list",
+    response_model=List[SiteSimpleRead],
     status_code=status.HTTP_200_OK,
 )
 async def read_sites(
