@@ -92,6 +92,8 @@ async def create_credential(
     credential_data.password = encrypt(crypt_key, credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
 
+    credential.password = credential_data.password
+
     return credential
 
 
