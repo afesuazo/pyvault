@@ -89,10 +89,11 @@ async def create_credential(
 ) -> Credential:
     credential_data.user_id = user.uid
     crypt_key = await redis.get(str(user.uid))
+    plain_pwd = credential_data.password
     credential_data.password = encrypt(crypt_key, credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
 
-    credential.password = credential_data.password
+    credential.password = plain_pwd
 
     return credential
 
