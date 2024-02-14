@@ -6,7 +6,7 @@ from fastapi import status
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-from app.api.auth_utils import oauth2_scheme
+from app.core.auth_utils import oauth2_scheme
 from app.crud.user import UserCRUD
 from app.models.user import User
 from config import SECRET_KEY, ALGORITHM

@@ -26,7 +26,7 @@ class BaseCRUD(ABC, Generic[Model, CreateSchema, UpdateSchema]):
         ...
 
     @abstractmethod
-    async def read_many(self, offset: int, limit: int, group_id: Optional[int]) -> List[Model]:
+    async def read_many(self, offset: int, limit: int) -> List[Model]:
         ...
 
     @abstractmethod
