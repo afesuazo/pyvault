@@ -87,8 +87,8 @@ async def create_credential(
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
 ) -> Credential:
-    credential_data.user_id = user.uid
-    crypt_key = await redis.get(str(user.uid))
+    credential_data.user_id = user.id
+    crypt_key = await redis.get(str(user.id))
     plain_pwd = credential_data.password
     credential_data.password = encrypt(crypt_key, credential_data.password).hex()
     credential = await credential_crud.create(credential_data=credential_data)
@@ -113,7 +113,7 @@ async def read_shared_credentials(
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
 ) -> List[Credential]:
-    shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user_id=user.uid,
+    shared_credentials = await shared_credential_crud.read_personal_many(offset, limit, user_id=user.id,
                                                                          friend_id=friend_id, owner=owned,
                                                                          credential_id=None)
     credentials = []
@@ -122,7 +122,7 @@ async def read_shared_credentials(
         # TODO: Check for empty results
         credentials = [await credential_crud.read(int(credential)) for credential in credential_ids]
 
-    crypt_key = await redis.get(str(user.uid))
+    crypt_key = await redis.get(str(user.id))
     for cred in credentials:
         cred.password = decrypt(crypt_key, cred.password)
 
@@ -140,7 +140,7 @@ async def read_shared_credentials_users(
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
         user=Depends(get_current_user)
 ) -> List[User]:
-    shared_credentials = await shared_credential_crud.read_personal_many(0, 200, user.uid, friend_id=None, owner=True,
+    shared_credentials = await shared_credential_crud.read_personal_many(0, 200, user.id, friend_id=None, owner=True,
                                                                          credential_id=credential_id)
     users = []
     if shared_credentials:
@@ -160,8 +160,8 @@ async def read_credential_by_id(
         user=Depends(get_current_user),
         redis: Redis = Depends(get_redis)
 ) -> Optional[Credential]:
-    credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.uid)
-    crypt_key = await redis.get(str(user.uid))
+    credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.id)
+    crypt_key = await redis.get(str(user.id))
     credential.password = decrypt(crypt_key, credential.password)
     return credential
 
@@ -180,8 +180,8 @@ async def read_credentials(
         redis: Redis = Depends(get_redis)
 ) -> list[Credential]:
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
-                                                           user_id=user.uid)
-    crypt_key = await redis.get(str(user.uid))
+                                                           user_id=user.id)
+    crypt_key = await redis.get(str(user.id))
 
     for cred in credentials:
         cred.password = decrypt(crypt_key, cred.password)
@@ -198,7 +198,7 @@ async def delete_credential_by_id(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> None:
-    credential = await credential_crud.read_personal(credential_id, user.uid)
+    credential = await credential_crud.read_personal(credential_id, user.id)
     if credential:
         await credential_crud.delete(unique_id=credential_id)
     else:
@@ -218,17 +218,17 @@ async def share_credential_by_id(
         friend_crud: FriendshipCRUD = Depends(FriendshipCRUD),
         user=Depends(get_current_user)
 ) -> Optional[SharedCredential]:
-    credential = await credential_crud.read_personal(credential_id, user.uid)
+    credential = await credential_crud.read_personal(credential_id, user.id)
     if credential:
         # TODO: Better response object to eliminate nesting
         # Check if friend exists
-        friendship = await friend_crud.read_friend_pair(user.uid, int(friend_id))
+        friendship = await friend_crud.read_friend_pair(user.id, int(friend_id))
         if friendship is None:
             return
         # Check if already shared with friend
-        shared_credential = await shared_credential_crud.read_pair_personal(user.uid, friend_id, credential_id)
+        shared_credential = await shared_credential_crud.read_pair_personal(user.id, friend_id, credential_id)
         if not shared_credential:
-            shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.uid,
+            shared_credential = SharedCredentialCreate(credential_id=credential_id, owner_id=user.id,
                                                        guest_id=friend_id)
             return await shared_credential_crud.create(shared_credential)
 
@@ -244,7 +244,7 @@ async def delete_credential_by_id(
         shared_credential_crud: SharedCredentialCRUD = Depends(SharedCredentialCRUD),
         user=Depends(get_current_user)
 ) -> None:
-    shared_credential = await shared_credential_crud.read_personal(shared_credential_id, user.uid)
+    shared_credential = await shared_credential_crud.read_personal(shared_credential_id, user.id)
     if shared_credential:
         await shared_credential_crud.delete(unique_id=shared_credential_id)
     else:

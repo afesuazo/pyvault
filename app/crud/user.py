@@ -14,67 +14,71 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
     def __init__(self, db_session: AsyncSession = Depends(get_db)):
         self.db_session = db_session
 
-    async def create(self, user_data: UserCreate) -> User:
-        user_data.first_name = user_data.first_name.title()
-        user_data.last_name = user_data.last_name.title()
-        user_dict = user_data.dict()
-        user = User(**user_dict)
-
-        user.hashed_password = get_hashed_password(user_data.password)
-
-        self.db_session.add(user)
+    # Private helper method to commit and refresh the instance
+    async def _commit_refresh(self, instance: User):
+        self.db_session.add(instance)
         await self.db_session.commit()
-        await self.db_session.refresh(user)
+        await self.db_session.refresh(instance)
+        return instance
 
-        return user
+    async def create(self, user_data: UserCreate) -> User:
+        # Hash the password before saving so the server doesn't store plaintext passwords
+        user = User(
+            **user_data.dict(exclude={"password"}),
+            hashed_password=get_hashed_password(user_data.password)
+        )
+        return await self._commit_refresh(user)
 
     async def read(self, unique_id: int) -> Optional[User]:
-        statement = select(User).where(User.uid == unique_id)
-        results = await self.db_session.execute(statement=statement)
+        statement = select(User).where(User.id == unique_id)
+        results = await self.db_session.exec(statement=statement)
 
-        # Scalar one or none allows empty results
-        user = results.scalar_one_or_none()
+        # one or none allows empty results
+        user = results.one_or_none()
         return user
 
     async def read_by_username(self, username: str) -> Optional[User]:
         statement = select(User).where(User.username == username)
-        results = await self.db_session.execute(statement=statement)
+        results = await self.db_session.exec(statement=statement)
 
-        # Scalar one or none allows empty results
-        user = results.scalar_one_or_none()
+        # one or none allows empty results
+        user = results.one_or_none()
         return user
 
     async def read_by_email(self, email: str) -> Optional[User]:
         statement = select(User).where(User.email == email)
-        results = await self.db_session.execute(statement=statement)
+        results = await self.db_session.exec(statement=statement)
 
-        # Scalar one or none allows empty results
-        user = results.scalar_one_or_none()
+        # one or none allows empty results
+        user = results.one_or_none()
         return user
 
-    async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[User]:
+    async def read_many(self, offset: int, limit: int) -> List[User]:
         statement = select(User).offset(offset).limit(limit)
-        results = await self.db_session.execute(statement=statement)
+        results = await self.db_session.exec(statement=statement)
 
-        users = [r for r, in results.all()]
-        return users
+        # users = [r for r, in results.all()]
+        return results.all()
 
     async def update(self, unique_id: int, user_data: UserUpdate) -> User:
         user = await self.read(unique_id=unique_id)
         assert user is not None, f"User {unique_id} not found"
-        values = user_data.dict()
+
+        # Get only the values that are set and update the user object
+        values = user_data.dict(exclude_unset=True)
+
+        # If the password is being updated, it needs to be hashed
+        if 'password' in values:
+            hashed_password = get_hashed_password(values['password'])
+            del values['password']
+            values['hashed_password'] = hashed_password
 
         for k, v in values.items():
             setattr(user, k, v)
 
-        self.db_session.add(user)
-        await self.db_session.commit()
-        await self.db_session.refresh(user)
-
-        return user
+        return await self._commit_refresh(user)
 
     async def delete(self, unique_id: int) -> None:
-        statement = delete(User).where(User.uid == unique_id)
-
+        statement = delete(User).where(User.id == unique_id)
         await self.db_session.execute(statement=statement)
         await self.db_session.commit()
