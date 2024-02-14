@@ -25,3 +25,5 @@ app = build_app()
 async def startup() -> None:
     app.state.DB = PasswordDB()
     await app.state.DB.initiate_db()
+
+# TODO: Add shutdown event to close db connection
