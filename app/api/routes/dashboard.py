@@ -4,7 +4,7 @@ from aioredis import Redis
 from fastapi import APIRouter, status, Depends, Query
 
 import db_filler
-from app.api.cypt_utils import decrypt, encrypt
+from app.core.cypt_utils import decrypt, encrypt
 from app.crud.credential import CredentialCRUD
 from app.crud.friendship import FriendshipCRUD
 from app.crud.shared_credential import SharedCredentialCRUD

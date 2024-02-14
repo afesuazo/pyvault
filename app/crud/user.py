@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.api.auth_utils import get_hashed_password
+from app.core.auth_utils import get_hashed_password, verify_password
 from app.crud.base import BaseCRUD
 from app.dependencies.db import get_db
 from app.models.user import User, UserCreate, UserUpdate
@@ -82,3 +82,11 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
         statement = delete(User).where(User.id == unique_id)
         await self.db_session.execute(statement=statement)
         await self.db_session.commit()
+
+    async def authenticate(self, username: str, password: str) -> Optional[User]:
+        user = await self.read_by_username(username=username)
+        if not user:
+            return None
+        if not verify_password(password, user.hashed_password):
+            return None
+        return user
