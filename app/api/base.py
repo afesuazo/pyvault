@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.api.routes import auth, dashboard
-from app.dependencies.auth import get_current_user
 
 api_router = APIRouter()
 

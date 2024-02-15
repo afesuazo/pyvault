@@ -18,7 +18,7 @@ router = APIRouter()
 
 
 # TODO: Move to developer only endpoint and require admin user credentials
-@router.get("/all-users")
+@router.get("/all-users", response_model=list[User])
 async def temp_users(user_crud: UserCRUD = Depends(UserCRUD)) -> list[User]:
     users = await user_crud.read_many(0, 100)
     return users

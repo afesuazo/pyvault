@@ -18,7 +18,7 @@ class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     hashed_password: str
     public_key: str
-    items: List["Credential"] = Relationship(back_populates="owner")
+    credentials: List["Credential"] = Relationship(back_populates="owner")
 
 
 # Adds fields used only during registration

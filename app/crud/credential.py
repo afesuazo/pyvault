@@ -38,14 +38,13 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
         statement: Select = select(Credential).offset(offset).limit(limit)
         results = await self.db_session.scalars(statement=statement)
 
-        credentials = [r for r, in results.all()]
+        credentials = [r for r in results.all()]
         return credentials
 
     # Requires a user id to ensure ownership
     async def read_personal(self, unique_id: int, user_id: int) -> Optional[Credential]:
-        statement: Select = select(Credential).where(
-            and_(Credential.id == unique_id, Credential.user_id == user_id).options(
-                selectinload(Credential.site))).options(selectinload(Credential.owner))
+        statement: Select = select(Credential).where(and_(Credential.id == unique_id, Credential.user_id == user_id)).options(
+                selectinload(Credential.site)).options(selectinload(Credential.owner))
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -64,7 +63,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
 
         results = await self.db_session.scalars(statement=statement)
 
-        credentials = [r for r, in results.all()]
+        credentials = [r for r in results.all()]
         return credentials
 
     async def update(self, unique_id: int, credential_data: CredentialUpdate) -> Credential:

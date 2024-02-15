@@ -57,7 +57,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         statement: Select = select(User).offset(offset).limit(limit)
         results = await self.db_session.scalars(statement=statement)
 
-        users = [r for r, in results.all()]
+        users = [r for r in results.all()]
         return users
 
     # TODO: Use Update sqlalchemy method

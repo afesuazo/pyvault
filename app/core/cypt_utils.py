@@ -1,3 +1,5 @@
+import base64
+
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import PBKDF2
 
@@ -39,8 +41,8 @@ def generate_master_key(password: str):
     return key
 
 
-def encrypt_with_key(public_key: str, data: str) -> bytes:
-    public_key = serialization.load_pem_public_key(public_key.encode(), backend=default_backend())
+def encrypt_with_key(public_key: bytes, data: str) -> str:
+    public_key = serialization.load_pem_public_key(public_key, backend=default_backend())
     encrypted_data = public_key.encrypt(
         data.encode(),
         padding.OAEP(
@@ -49,4 +51,4 @@ def encrypt_with_key(public_key: str, data: str) -> bytes:
             label=None
         )
     )
-    return encrypted_data
+    return base64.b64encode(encrypted_data).decode('utf-8')
