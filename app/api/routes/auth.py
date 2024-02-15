@@ -11,7 +11,7 @@ from app.crud.user import UserCRUD
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis import get_redis
 from app.models.token import Token
-from app.models.user import UserCreate, User, UserRead, UserRegistrationRead
+from app.models.user import UserCreate, User, UserRead, UserRegistrationRead, UserCreateInternal
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
@@ -51,9 +51,10 @@ async def register_user(
     # Generate public/private key pair
     public_key, private_key = generate_key_pair()
 
-    user_data.public_key = public_key
-    user = await user_crud.create(user_data=user_data)
-    user_registration_read = UserRegistrationRead(**user.dict(exclude_unset=True))
+    # Save user to database
+    user_internal_data: UserCreateInternal = UserCreateInternal(**user_data.dict(), public_key=public_key)
+    user = await user_crud.create(user_data=user_internal_data)
+    user_registration_read = UserRegistrationRead(**user.dict(exclude_unset=True), private_key=private_key)
     return user_registration_read
 
 

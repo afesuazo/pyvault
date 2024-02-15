@@ -1,13 +1,13 @@
 from typing import Optional
 
 from pydantic import EmailStr, field_validator
-from sqlmodel import Field, SQLModel
+from sqlmodel import AutoString, Field, SQLModel
 
 
 # Data only model used by all CRUD operations
 class UserBase(SQLModel):
     # Used for password recovery
-    email: EmailStr = Field(unique=True)
+    email: EmailStr = Field(unique=True, sa_type=AutoString)
     username: str = Field(unique=True)
 
 
@@ -41,6 +41,10 @@ class UserCreate(UserBase):
         if len(value) < 8:
             raise ValueError('Password must be at least 8 characters')
         return value
+
+
+class UserCreateInternal(UserCreate):
+    public_key: str
 
 
 # Allows for modifications of all base fields and password

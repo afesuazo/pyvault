@@ -7,10 +7,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.auth_utils import get_hashed_password, verify_password
 from app.crud.base import BaseCRUD
 from app.dependencies.db import get_db
-from app.models.user import User, UserCreate, UserUpdate
+from app.models.user import User, UserUpdate, UserCreateInternal
 
 
-class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
+class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
     def __init__(self, db_session: AsyncSession = Depends(get_db)):
         self.db_session = db_session
 
@@ -21,7 +21,7 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
         await self.db_session.refresh(instance)
         return instance
 
-    async def create(self, user_data: UserCreate) -> User:
+    async def create(self, user_data: UserCreateInternal) -> User:
         # Hash the password before saving so the server doesn't store plaintext passwords
         user = User(
             **user_data.dict(exclude={"password"}),
@@ -31,7 +31,7 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
 
     async def read(self, unique_id: int) -> Optional[User]:
         statement = select(User).where(User.id == unique_id)
-        results = await self.db_session.exec(statement=statement)
+        results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
         user = results.one_or_none()
@@ -39,7 +39,7 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
 
     async def read_by_username(self, username: str) -> Optional[User]:
         statement = select(User).where(User.username == username)
-        results = await self.db_session.exec(statement=statement)
+        results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
         user = results.one_or_none()
@@ -47,7 +47,7 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
 
     async def read_by_email(self, email: str) -> Optional[User]:
         statement = select(User).where(User.email == email)
-        results = await self.db_session.exec(statement=statement)
+        results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
         user = results.one_or_none()
@@ -55,10 +55,10 @@ class UserCRUD(BaseCRUD[User, UserCreate, UserUpdate]):
 
     async def read_many(self, offset: int, limit: int) -> List[User]:
         statement = select(User).offset(offset).limit(limit)
-        results = await self.db_session.exec(statement=statement)
+        results = await self.db_session.scalars(statement=statement)
 
-        # users = [r for r, in results.all()]
-        return results.all()
+        users = [r for r, in results.all()]
+        return users
 
     async def update(self, unique_id: int, user_data: UserUpdate) -> User:
         user = await self.read(unique_id=unique_id)

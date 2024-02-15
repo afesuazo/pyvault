@@ -2,12 +2,14 @@ aiohttp==3.9.3
 aioredis==2.0.1
 asyncmy
 asyncpg
+bcrypt
 greenlet==1.1.2
 fastapi==0.109.2
 gunicorn==20.1.0
 passlib==1.7.4
 pycryptodome
 pydantic>=2.6.1
+pydantic[email]
 python-jose[cryptography]
 python-multipart
 SQLAlchemy==2.0.27
