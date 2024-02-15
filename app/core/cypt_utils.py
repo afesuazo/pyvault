@@ -9,8 +9,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
-from config import SALT_2
-
 
 def generate_key_pair():
     private_key = rsa.generate_private_key(
@@ -33,12 +31,6 @@ def generate_key_pair():
     )
 
     return pem_public_key.decode('utf-8'), pem_private_key.decode('utf-8')
-
-
-def generate_master_key(password: str):
-    salt = SALT_2
-    key = PBKDF2(password, salt, 16, hmac_hash_module=SHA512)
-    return key
 
 
 def encrypt_with_key(public_key: bytes, data: str) -> str:
