@@ -14,29 +14,29 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
     def __init__(self, db_session: AsyncSession = Depends(get_db)):
         self.db_session = db_session
 
-    async def create(self, site_data: SiteCreate) -> Site:
-        site_dict = site_data.dict()
-        site = Site(**site_dict)
-
-        self.db_session.add(site)
+    async def _commit_refresh(self, instance: Site):
+        self.db_session.add(instance)
         await self.db_session.commit()
-        await self.db_session.refresh(site)
+        await self.db_session.refresh(instance)
+        return instance
 
-        return site
+    async def create(self, site_data: SiteCreate) -> Site:
+        site = Site(**site_data.dict())
+        return await self._commit_refresh(site)
 
     async def read(self, unique_id: int) -> Optional[Site]:
-        statement = select(Site).where(Site.uid == unique_id).options(selectinload(Site.credentials))
-        results = await self.db_session.execute(statement=statement)
+        statement = select(Site).where(Site.id == unique_id).options(selectinload(Site.credentials))
+        results = await self.db_session.scalars(statement=statement)
 
         # Scalar one or none allows empty results
-        site = results.scalar_one_or_none()
+        site: Site = results.one_or_none()
         return site
 
     async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[Site]:
         statement = select(Site).offset(offset).limit(limit).options(selectinload(Site.credentials))
-        results = await self.db_session.execute(statement=statement)
+        results = await self.db_session.scalars(statement=statement)
 
-        sites = [r for r, in results.all()]
+        sites: List[Site] = [r for r in results.all()]
         return sites
 
     async def update(self, unique_id: int, site_data: SiteUpdate) -> Site:
@@ -47,14 +47,9 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         for k, v in values.items():
             setattr(site, k, v)
 
-        self.db_session.add(site)
-        await self.db_session.commit()
-        await self.db_session.refresh(site)
-
-        return site
+        return await self._commit_refresh(site)
 
     async def delete(self, unique_id: int) -> None:
-        statement = delete(Site).where(Site.uid == unique_id)
-
+        statement = delete(Site).where(Site.id == unique_id)
         await self.db_session.execute(statement=statement)
         await self.db_session.commit()

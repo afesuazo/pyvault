@@ -1,7 +1,7 @@
 from typing import Optional, List
 
 from fastapi import Depends
-from sqlalchemy import delete, select
+from sqlalchemy import delete, Delete, select, Select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.auth_utils import get_hashed_password, verify_password
@@ -30,7 +30,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return await self._commit_refresh(user)
 
     async def read(self, unique_id: int) -> Optional[User]:
-        statement = select(User).where(User.id == unique_id)
+        statement: Select = select(User).where(User.id == unique_id)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -38,7 +38,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_by_username(self, username: str) -> Optional[User]:
-        statement = select(User).where(User.username == username)
+        statement: Select = select(User).where(User.username == username)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -46,7 +46,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_by_email(self, email: str) -> Optional[User]:
-        statement = select(User).where(User.email == email)
+        statement: Select = select(User).where(User.email == email)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -54,12 +54,13 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_many(self, offset: int, limit: int) -> List[User]:
-        statement = select(User).offset(offset).limit(limit)
+        statement: Select = select(User).offset(offset).limit(limit)
         results = await self.db_session.scalars(statement=statement)
 
-        users = [r for r, in results.all()]
+        users = [r for r in results.all()]
         return users
 
+    # TODO: Use Update sqlalchemy method
     async def update(self, unique_id: int, user_data: UserUpdate) -> User:
         user = await self.read(unique_id=unique_id)
         assert user is not None, f"User {unique_id} not found"
@@ -79,7 +80,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return await self._commit_refresh(user)
 
     async def delete(self, unique_id: int) -> None:
-        statement = delete(User).where(User.id == unique_id)
+        statement: Delete = delete(User).where(User.id == unique_id)
         await self.db_session.execute(statement=statement)
         await self.db_session.commit()
 
