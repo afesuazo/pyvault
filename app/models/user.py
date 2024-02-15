@@ -9,7 +9,6 @@ class UserBase(SQLModel):
     # Used for password recovery
     email: EmailStr = Field(unique=True)
     username: str = Field(unique=True)
-    public_key: str
 
 
 # Includes full model database representation
@@ -18,6 +17,7 @@ class User(UserBase, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     hashed_password: str
+    public_key: str
 
 
 # Adds fields used only during registration
@@ -57,4 +57,8 @@ class UserUpdate(UserBase):
 
 
 class UserRead(UserBase):
-    pass
+    public_key: str
+
+
+class UserRegistrationRead(UserRead):
+    private_key: str
