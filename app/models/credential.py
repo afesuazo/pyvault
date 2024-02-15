@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlmodel import Field, SQLModel, Relationship
-
+from app.models.user import UserRead
+from sqlmodel import Field, Relationship, SQLModel
 
 # Data only model
 from app.models.site import SiteRead
@@ -13,53 +13,35 @@ class CredentialBase(SQLModel):
     email: Optional[str] = Field(default=None)
     username: Optional[str] = Field(default=None)
     password: str
+    favorite: bool = Field(default=False)
 
 
 class Credential(CredentialBase, table=True):
     __tablename__ = "credential"
 
-    uid: Optional[int] = Field(default=None, primary_key=True, index=True)
+    id: Optional[int] = Field(default=None, primary_key=True, index=True)
     user_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
-    favorite: bool = Field(default=False)
+
     site: Optional["Site"] = Relationship(back_populates="credentials", sa_relationship_kwargs={'lazy': 'selectin'})
     site_id: Optional[int] = Field(foreign_key="site.uid", nullable=True)
 
+    # Owner of the credential
+    owner: "User" = Relationship(back_populates="credentials", sa_relationship_kwargs={'lazy': 'selectin'})
 
-# Created to differentiate from Base in docs
+
+# User id has to be provided when creating a credential
 class CredentialCreate(CredentialBase):
     user_id: int
     site_id: Optional[int]
 
 
 class CredentialUpdate(CredentialBase):
-    favorite: bool
+    pass
 
 
 class CredentialRead(CredentialBase):
     created_at: datetime
-    uid: int
+    id: int
     site: Optional[SiteRead]
-
-class SharedCredentialBase(SQLModel):
-    credential_id: int = Field(foreign_key="credential.uid")
-
-    owner_id: int = Field(foreign_key="user.id")
-    guest_id: int = Field(foreign_key="user.id")
-
-
-class SharedCredential(SharedCredentialBase, table=True):
-    __tablename__ = "sharedCredentials"
-
-    uid: Optional[int] = Field(default=None, primary_key=True, index=True)
-
-
-# Created to differentiate from Base in docs
-
-
-class SharedCredentialCreate(SharedCredentialBase):
-    pass
-
-
-class SharedCredentialUpdate(SharedCredentialBase):
-    pass
+    owner: UserRead

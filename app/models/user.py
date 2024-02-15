@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import EmailStr, field_validator
-from sqlmodel import AutoString, Field, SQLModel
+from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
 # Data only model used by all CRUD operations
@@ -18,6 +18,7 @@ class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     hashed_password: str
     public_key: str
+    items: List["Credential"] = Relationship(back_populates="owner")
 
 
 # Adds fields used only during registration
@@ -53,7 +54,7 @@ class UserUpdate(UserBase):
 
     @field_validator('password')
     @classmethod
-    def validate_password_lenght(cls, value: str):
+    def validate_password_length(cls, value: str):
         # Constraint length
         if len(value) < 8:
             raise ValueError('Password must be at least 8 characters')
