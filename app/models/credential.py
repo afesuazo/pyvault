@@ -19,7 +19,7 @@ class Credential(CredentialBase, table=True):
     __tablename__ = "credential"
 
     uid: Optional[int] = Field(default=None, primary_key=True, index=True)
-    user_id: int = Field(foreign_key="user.uid")
+    user_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
     favorite: bool = Field(default=False)
     site: Optional["Site"] = Relationship(back_populates="credentials", sa_relationship_kwargs={'lazy': 'selectin'})
@@ -44,8 +44,8 @@ class CredentialRead(CredentialBase):
 class SharedCredentialBase(SQLModel):
     credential_id: int = Field(foreign_key="credential.uid")
 
-    owner_id: int = Field(foreign_key="user.uid")
-    guest_id: int = Field(foreign_key="user.uid")
+    owner_id: int = Field(foreign_key="user.id")
+    guest_id: int = Field(foreign_key="user.id")
 
 
 class SharedCredential(SharedCredentialBase, table=True):
