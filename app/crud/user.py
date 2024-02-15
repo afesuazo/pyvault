@@ -30,7 +30,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return await self._commit_refresh(user)
 
     async def read(self, unique_id: int) -> Optional[User]:
-        statement: Select =select(User).where(User.id == unique_id)
+        statement: Select = select(User).where(User.id == unique_id)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -38,7 +38,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_by_username(self, username: str) -> Optional[User]:
-        statement: Select =select(User).where(User.username == username)
+        statement: Select = select(User).where(User.username == username)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -46,7 +46,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_by_email(self, email: str) -> Optional[User]:
-        statement: Select =select(User).where(User.email == email)
+        statement: Select = select(User).where(User.email == email)
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -54,7 +54,7 @@ class UserCRUD(BaseCRUD[User, UserCreateInternal, UserUpdate]):
         return user
 
     async def read_many(self, offset: int, limit: int) -> List[User]:
-        statement: Select =select(User).offset(offset).limit(limit)
+        statement: Select = select(User).offset(offset).limit(limit)
         results = await self.db_session.scalars(statement=statement)
 
         users = [r for r, in results.all()]

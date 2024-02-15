@@ -12,7 +12,7 @@ class CredentialBase(SQLModel):
     nickname: str = Field(index=True, unique=True)
     email: Optional[str] = Field(default=None)
     username: Optional[str] = Field(default=None)
-    password: str
+    encrypted_password: str
     favorite: bool = Field(default=False)
 
 
@@ -24,7 +24,7 @@ class Credential(CredentialBase, table=True):
     created_at: datetime = Field(default=datetime.utcnow(), nullable=False)
 
     site: Optional["Site"] = Relationship(back_populates="credentials", sa_relationship_kwargs={'lazy': 'selectin'})
-    site_id: Optional[int] = Field(foreign_key="site.uid", nullable=True)
+    site_id: Optional[int] = Field(foreign_key="site.id", nullable=True)
 
     # Owner of the credential
     owner: "User" = Relationship(back_populates="credentials", sa_relationship_kwargs={'lazy': 'selectin'})

@@ -26,7 +26,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
 
     # Reads a credential by its unique id regardless of the user, used for admin purposes
     async def read(self, unique_id: int) -> Optional[Credential]:
-        statement: Select = select(Credential).where(Credential.uid == unique_id).options(selectinload(Credential.site))
+        statement: Select = select(Credential).where(Credential.id == unique_id).options(selectinload(Credential.site))
         results = await self.db_session.scalars(statement=statement)
 
         # one or none allows empty results
@@ -54,7 +54,7 @@ class CredentialCRUD(BaseCRUD[Credential, CredentialCreate, CredentialUpdate]):
 
     # Requires a user id to ensure ownership
     async def read_personal_many(self, offset: int, limit: int, user_id: Optional[int], site_id: Optional[int]) -> List[
-        Credential]:
+            Credential]:
         statement: Select = select(Credential).where(Credential.user_id == user_id).offset(offset).limit(limit).options(
             selectinload(Credential.site))
 

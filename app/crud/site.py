@@ -25,7 +25,7 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         return site
 
     async def read(self, unique_id: int) -> Optional[Site]:
-        statement = select(Site).where(Site.uid == unique_id).options(selectinload(Site.credentials))
+        statement = select(Site).where(Site.id == unique_id).options(selectinload(Site.credentials))
         results = await self.db_session.execute(statement=statement)
 
         # Scalar one or none allows empty results
@@ -54,7 +54,7 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         return site
 
     async def delete(self, unique_id: int) -> None:
-        statement = delete(Site).where(Site.uid == unique_id)
+        statement = delete(Site).where(Site.id == unique_id)
 
         await self.db_session.execute(statement=statement)
         await self.db_session.commit()

@@ -1,11 +1,11 @@
-from Crypto.Random import get_random_bytes
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Cipher import AES
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
 
 from config import SALT_2
 
@@ -39,20 +39,14 @@ def generate_master_key(password: str):
     return key
 
 
-def encrypt(key: bytes, message: str):
-    message = message.encode()
-    nonce = get_random_bytes(12)
-    cipher = AES.new(key, AES.MODE_GCM, nonce)
-    ciphertext, tag = cipher.encrypt_and_digest(message)
-    encrypted_data = ciphertext + nonce + tag
+def encrypt_with_key(public_key: str, data: str) -> bytes:
+    public_key = serialization.load_pem_public_key(public_key.encode(), backend=default_backend())
+    encrypted_data = public_key.encrypt(
+        data.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
     return encrypted_data
-
-
-def decrypt(key: bytes, data: str):
-    data = bytes.fromhex(data)
-    tag = data[-16:]
-    nonce = data[-28:-16]
-    encrypted_data = data[:-28]
-    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-    decrypted_data = cipher.decrypt_and_verify(encrypted_data, tag)
-    return decrypted_data.decode()

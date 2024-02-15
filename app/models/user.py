@@ -37,7 +37,7 @@ class UserCreate(UserBase):
 
     @field_validator('password')
     @classmethod
-    def validate_password_lenght(cls, value: str):
+    def validate_password_length(cls, value: str):
         # Constraint length
         if len(value) < 8:
             raise ValueError('Password must be at least 8 characters')

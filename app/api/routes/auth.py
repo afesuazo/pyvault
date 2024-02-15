@@ -80,6 +80,8 @@ async def login_user(
     access_token_expire_time = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(user=user.username, expires_delta=access_token_expire_time)
 
+    await redis.execute_command('set', str(user.id), user.public_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+
     token = Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expire_time.seconds)
     return token
 
