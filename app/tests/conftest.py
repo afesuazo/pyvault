@@ -2,8 +2,10 @@ from typing import AsyncGenerator
 
 import config
 from app.core.auth_utils import get_hashed_password
-from app.core.cypt_utils import generate_key_pair
-from app.models.user import User, UserCreate, UserCreateInternal
+from app.core.cypt_utils import generate_key_pair, encrypt_with_key
+from app.models.credential import Credential
+from app.models.site import Site
+from app.models.user import User
 from httpx import AsyncClient
 import pytest
 
@@ -13,6 +15,37 @@ from sqlmodel.pool import StaticPool
 
 from app.dependencies.db import get_db
 from app.main import app
+
+db_user_quantity = 5
+db_site_quantity = 2
+db_credential_quantity = 10
+
+key_pairs = [generate_key_pair() for _ in range(db_user_quantity)]
+
+
+def user_generator():
+    for i in range(5):
+        yield User(username=f'test_user_{i}',
+                   email=f'test_user_{i}@gmail.com',
+                   hashed_password=get_hashed_password("test_password"),
+                   public_key=key_pairs[i][0])
+
+
+def site_generator():
+    for i in range(db_site_quantity):
+        yield Site(name=f'Site_{i}', url=f'https://site{i}.com')
+
+
+def credential_generator():
+    # Create 2 credentials per user
+    for i in range(db_credential_quantity):
+        # user id and site id are 1-indexed in the db
+        yield Credential(nickname=f'Credential{i}',
+                         email=f'test_user_{i % db_user_quantity}@gmail.com',
+                         username=f'test_user_{i % db_user_quantity}',
+                         encrypted_password=encrypt_with_key(key_pairs[i % db_user_quantity][0], "test_password"),
+                         user_id=(i % db_user_quantity) + 1,
+                         site_id=(i % db_site_quantity) + 1)
 
 
 @pytest.fixture
@@ -24,18 +57,22 @@ async def loaded_db_session() -> AsyncGenerator[AsyncSession, None]:
 
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
-        test_user = UserCreateInternal(username="test_user",
-                                       email="test_user@test.com",
-                                       password="test_password",
-                                       public_key=generate_key_pair()[0])
-        test_user = User(
-            **test_user.dict(exclude={"password"}),
-            hashed_password=get_hashed_password(test_user.password)
-        )
 
-        session.add(test_user)
-        await session.commit()
-        await session.refresh(test_user)
+        # Load test data into the test database
+        for user in user_generator():
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+
+        for site in site_generator():
+            session.add(site)
+            await session.commit()
+            await session.refresh(site)
+
+        for credential in credential_generator():
+            session.add(credential)
+            await session.commit()
+            await session.refresh(credential)
 
         yield session
 

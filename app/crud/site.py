@@ -32,6 +32,14 @@ class SiteCRUD(BaseCRUD[Site, SiteCreate, SiteUpdate]):
         site: Site = results.one_or_none()
         return site
 
+    async def read_by_name(self, name: str) -> Optional[Site]:
+        statement = select(Site).where(Site.name == name).options(selectinload(Site.credentials))
+        results = await self.db_session.scalars(statement=statement)
+
+        # Scalar one or none allows empty results
+        site: Site = results.one_or_none()
+        return site
+
     async def read_many(self, offset: int, limit: int, group_id: Optional[int] = None) -> List[Site]:
         statement = select(Site).offset(offset).limit(limit).options(selectinload(Site.credentials))
         results = await self.db_session.scalars(statement=statement)

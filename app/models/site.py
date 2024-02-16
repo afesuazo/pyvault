@@ -1,11 +1,21 @@
 from typing import Optional
 
 from sqlmodel import Field, SQLModel, Relationship
+from pydantic import field_validator
 
 
 # Data only model
 class SiteBase(SQLModel):
-    name: str
+    name: str = Field(unique=True)
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, value: str):
+        # Constraint length, permit only alphanumeric
+        if len(value) < 3 or len(value) > 20:
+            raise ValueError('Site name must be between 3 and 20 characters')
+        return value
+
 
 
 class Site(SiteBase, table=True):

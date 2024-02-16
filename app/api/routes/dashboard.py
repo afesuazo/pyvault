@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from aioredis import Redis
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
-from fastapi import APIRouter, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 
 import db_filler
 from app.core.cypt_utils import encrypt_with_key
@@ -33,6 +33,12 @@ async def ping() -> dict[str, str]:
 async def create_site(
         site_data: SiteCreate, site_crud: SiteCRUD = Depends(SiteCRUD)
 ) -> Site:
+    site = await site_crud.read_by_name(site_data.name)
+    if site:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Site with this name already exist"
+        )
     site = await site_crud.create(site_data=site_data)
     return site
 
@@ -48,12 +54,17 @@ async def read_sites(
         limit: int = Query(default=50, lte=50),
         site_crud: SiteCRUD = Depends(SiteCRUD),
 ) -> List[Site]:
+    if limit < 0 or offset < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Offset and limit must be positive numbers",
+        )
     sites = await site_crud.read_many(offset=offset, limit=limit)
     return sites
 
 
 @router.get(
-    "/sites/id_list",
+    "/sites/reduced",
     summary="Get a list of all available sites, id and name only",
     response_model=List[SiteSimpleRead],
     status_code=status.HTTP_200_OK,
@@ -63,6 +74,11 @@ async def read_sites(
         limit: int = Query(default=50, lte=50),
         site_crud: SiteCRUD = Depends(SiteCRUD),
 ) -> List[Site]:
+    if limit < 0 or offset < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Offset and limit must be positive numbers",
+        )
     sites = await site_crud.read_many(offset=offset, limit=limit)
     return sites
 
@@ -137,6 +153,11 @@ async def read_credentials(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> list[Credential]:
+    if limit < 0 or offset < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Offset and limit must be positive numbers",
+        )
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
                                                            user_id=user.id)
     return credentials

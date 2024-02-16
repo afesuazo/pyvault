@@ -33,8 +33,8 @@ def generate_key_pair():
     return pem_public_key.decode('utf-8'), pem_private_key.decode('utf-8')
 
 
-def encrypt_with_key(public_key: bytes, data: str) -> str:
-    public_key = serialization.load_pem_public_key(public_key, backend=default_backend())
+def encrypt_with_key(public_key: str, data: str) -> str:
+    public_key = serialization.load_pem_public_key(public_key.encode(), backend=default_backend())
     encrypted_data = public_key.encrypt(
         data.encode(),
         padding.OAEP(
