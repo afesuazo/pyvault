@@ -20,17 +20,12 @@ async def test_register_new_user(client: AsyncClient, credentials: dict[str]) ->
     assert response_json.get("username") == credentials.get("username")
 
 
-@pytest.mark.parametrize("credentials",
-                         [
-                             {"username": "test_user_primary", "email": "primary@somemail.com",
-                              "password": "password_1"},
-                             {"username": "test_user_primary", "email": "secondary@somemail.com",
-                              "password": "password_2"}
-                         ])
+
 @pytest.mark.asyncio
-async def test_register_duplicate_user_raises_error(client: AsyncClient, credentials: dict[str]) -> None:
-    response = await client.post("/auth/register", json=credentials)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+async def test_register_duplicate_user_raises_error(client: AsyncClient) -> None:
+    await client.post("/auth/register", json={"username": "test_user_primary", "email": "primary@somemail.com", "password": "password_1"})
+    response = await client.post("/auth/register", json={"username": "test_user_primary", "email": "secondary@somemail.com", "password": "password_2"})
+    assert response.status_code == status.HTTP_409_CONFLICT
 
 
 @pytest.mark.parametrize("credentials",
@@ -54,7 +49,7 @@ async def test_register_user_with_empty_data_raises_error(client: AsyncClient) -
 
 @pytest.mark.parametrize("credentials",
                          [
-                             {"username": "test_user", "password": "test_password"}
+                             {"username": "test_user_0", "password": "test_password"}
                          ])
 @pytest.mark.asyncio
 async def test_login_user(client_populated_db: AsyncClient, credentials: dict[str]) -> None:
