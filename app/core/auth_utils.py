@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Union
 
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -11,14 +10,11 @@ password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", scheme_name="JWT")
 
 
-def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(user: str, expires_delta: timedelta = timedelta(minutes=15)) -> str:
+    # Default expiration time is 15 minutes
+    expire = datetime.utcnow() + expires_delta
+    to_encode = {"exp": expire, "sub": user}
+    encoded_jwt = jwt.encode(to_encode, key=SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 

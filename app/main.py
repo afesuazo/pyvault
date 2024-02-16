@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes.base import api_router
+from app.api.base import api_router
 from app.database import PasswordDB
 
 
@@ -25,3 +25,5 @@ app = build_app()
 async def startup() -> None:
     app.state.DB = PasswordDB()
     await app.state.DB.initiate_db()
+
+# TODO: Add shutdown event to close db connection
