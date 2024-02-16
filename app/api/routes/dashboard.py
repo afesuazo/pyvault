@@ -4,7 +4,6 @@ from aioredis import Redis
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 
-import db_filler
 from app.core.cypt_utils import encrypt_with_key
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
@@ -184,14 +183,3 @@ async def delete_credential_by_id(
         return
 
     response.status_code = status.HTTP_404_NOT_FOUND
-
-
-# TODO: Move to admin routes
-@router.get("/debug_setup")
-async def debug_setup() -> None:
-    await db_filler.add_base_data()
-
-
-@router.get("/debug_setup_friends")
-async def debug_setup() -> None:
-    await db_filler.add_friends()
