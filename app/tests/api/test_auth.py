@@ -77,10 +77,14 @@ async def test_login_user_with_invalid_credentials_raises_error(client_populated
 
 
 @pytest.mark.asyncio
-async def test_get_current_user(client: AsyncClient) -> None:
-    pass
+async def test_get_current_user(client_populated_db: AsyncClient, superuser_token_headers: dict[str, str]) -> None:
+    response = await client_populated_db.get("/auth/me", headers=superuser_token_headers)
+    assert response.status_code == status.HTTP_200_OK
+    response_json = response.json()
+    assert response_json.get("username") == "test_superuser"
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_with_invalid_token_raises_error(client: AsyncClient) -> None:
-    pass
+async def test_get_current_user_with_invalid_token_raises_error(client_populated_db: AsyncClient) -> None:
+    response = await client_populated_db.get("/auth/me", headers={"Authorization": f"Bearer {123123}"})
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED

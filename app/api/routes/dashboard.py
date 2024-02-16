@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from aioredis import Redis
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 
 import db_filler
 from app.core.cypt_utils import encrypt_with_key
@@ -118,6 +118,8 @@ async def create_credential(
     if not encryption_key:
         encryption_key = user.public_key
         await redis.execute_command('set', str(user.id), encryption_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    else:
+        encryption_key = encryption_key.decode("utf-8")
 
     credential_data.encrypted_password = encrypt_with_key(encryption_key, credential_data.encrypted_password)
     credential = await credential_crud.create(credential_data=credential_data)
@@ -137,6 +139,9 @@ async def read_credential_by_id(
         user=Depends(get_current_user)
 ) -> Optional[Credential]:
     credential = await credential_crud.read_personal(unique_id=credential_id, user_id=user.id)
+    if not credential:
+        raise HTTPException(status_code=404, detail="Item not found")
+
     return credential
 
 
@@ -169,15 +174,16 @@ async def read_credentials(
 )
 async def delete_credential_by_id(
         credential_id: int,
+        response: Response,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
-        user=Depends(get_current_user)
+        user=Depends(get_current_user),
 ) -> None:
     credential = await credential_crud.read_personal(credential_id, user.id)
     if credential:
         await credential_crud.delete(unique_id=credential_id)
-        return status.HTTP_200_OK
+        return
 
-    return status.HTTP_404_NOT_FOUND
+    response.status_code = status.HTTP_404_NOT_FOUND
 
 
 # TODO: Move to admin routes

@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Any, Dict, Coroutine
 
 import config
 from app.core.auth_utils import get_hashed_password
@@ -20,6 +20,7 @@ db_user_quantity = 5
 db_site_quantity = 2
 db_credential_quantity = 10
 
+super_user_key_pair = generate_key_pair()
 key_pairs = [generate_key_pair() for _ in range(db_user_quantity)]
 
 
@@ -48,6 +49,18 @@ def credential_generator():
                          site_id=(i % db_site_quantity) + 1)
 
 
+async def get_superuser_token_headers(client: AsyncClient) -> dict[str, str]:
+    login_data = {
+        "username": 'test_superuser',
+        "password": 'test_superuser_password'
+    }
+    response = await client.post(f"/auth/login", data=login_data)
+    response_json = response.json()
+    token = response_json["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    return headers
+
+
 @pytest.fixture
 async def loaded_db_session() -> AsyncGenerator[AsyncSession, None]:
     engine: AsyncEngine = create_async_engine(config.TEST_DB_URL, poolclass=StaticPool)
@@ -57,6 +70,15 @@ async def loaded_db_session() -> AsyncGenerator[AsyncSession, None]:
 
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
+
+        # Add a superuser to the database
+        superuser = User(username="test_superuser",
+                         email="test_superuser@gmail.com",
+                         hashed_password=get_hashed_password("test_superuser_password"),
+                         public_key=super_user_key_pair[0])
+        session.add(superuser)
+        await session.commit()
+        await session.refresh(superuser)
 
         # Load test data into the test database
         for user in user_generator():
@@ -112,3 +134,8 @@ async def client_populated_db(loaded_db_session: AsyncSession) -> AsyncGenerator
         app.dependency_overrides[get_db] = get_session_override
         yield client
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def superuser_token_headers(client_populated_db: AsyncClient) -> dict[str, str]:
+    return await get_superuser_token_headers(client_populated_db)
