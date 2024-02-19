@@ -1,4 +1,4 @@
-# Vault
+# PyVault
 
 ![GitHub Release](https://img.shields.io/github/v/release/afesuazo/vault?include_prereleases)
 
