@@ -33,7 +33,7 @@ class Credential(CredentialBase, table=True):
 # User id has to be provided when creating a credential
 class CredentialCreate(CredentialBase):
     user_id: int
-    site_id: Optional[int]
+    site_id: Optional[int] = None
 
 
 class CredentialUpdate(CredentialBase):
