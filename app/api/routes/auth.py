@@ -48,13 +48,13 @@ async def register_user(
             detail="User with this email already exist"
         )
 
-    # Generate public/private key pair
+    # Generate public/private key pair (str)
     public_key, private_key = generate_key_pair()
 
     # Save user to database
-    user_internal_data: UserCreateInternal = UserCreateInternal(**user_data.dict(), public_key=public_key)
+    user_internal_data: UserCreateInternal = UserCreateInternal(**user_data.dict(), public_key=public_key, private_key=private_key)
     user = await user_crud.create(user_data=user_internal_data)
-    user_registration_read = UserRegistrationRead(**user.dict(exclude_unset=True), private_key=private_key)
+    user_registration_read = UserRegistrationRead(**user.dict(exclude_unset=True))
     return user_registration_read
 
 
@@ -80,7 +80,8 @@ async def login_user(
     access_token_expire_time = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(user=user.username, expires_delta=access_token_expire_time)
 
-    await redis.execute_command('set', str(user.id), user.public_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    await redis.execute_command('set', f"{str(user.id)}_public", user.public_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    await redis.execute_command('set', f"{str(user.id)}_private", user.private_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
     token = Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expire_time.seconds)
     return token

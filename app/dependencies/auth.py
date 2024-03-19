@@ -11,6 +11,11 @@ from app.crud.user import UserCRUD
 from app.models.user import User
 from config import SECRET_KEY, ALGORITHM
 
+import logging
+
+logger = logging.getLogger("pyvault.dependencies.auth")
+logging.basicConfig(level=logging.DEBUG)
+
 
 class TokenData(BaseModel):
     username: str | None = None
@@ -28,7 +33,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), user_crud: UserC
         if username is None:
             raise credentials_exception
         token_data = TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        logger.error("JWTError: " + str(e))
         raise credentials_exception
     user: Optional[User] = await user_crud.read_by_username(username=token_data.username)
     if user is None:
