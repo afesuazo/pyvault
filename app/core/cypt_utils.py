@@ -1,8 +1,5 @@
 import base64
 
-from Crypto.Hash import SHA512
-from Crypto.Protocol.KDF import PBKDF2
-
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -44,3 +41,16 @@ def encrypt_with_key(public_key: str, data: str) -> str:
         )
     )
     return base64.b64encode(encrypted_data).decode('utf-8')
+
+
+def decrypt_with_key(private_key: str, data: str) -> str:
+    private_key = serialization.load_pem_private_key(private_key.encode(), password=None, backend=default_backend())
+    decrypted_data = private_key.decrypt(
+        base64.b64decode(data),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return decrypted_data.decode('utf-8')
