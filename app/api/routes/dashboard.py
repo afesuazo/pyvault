@@ -111,7 +111,6 @@ async def create_credential(
         credential_data: CredentialCreate,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user),
-        redis: Redis = Depends(get_redis)
 ) -> Credential:
     # Overwrite the user_id with the current authenticated user id
     credential_data.user_id = user.id
