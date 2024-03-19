@@ -18,6 +18,7 @@ class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, index=True)
     hashed_password: str
     public_key: str
+    private_key: str
     credentials: List["Credential"] = Relationship(back_populates="owner")
 
 
@@ -46,6 +47,7 @@ class UserCreate(UserBase):
 
 class UserCreateInternal(UserCreate):
     public_key: str
+    private_key: str
 
 
 # Allows for modifications of all base fields and password

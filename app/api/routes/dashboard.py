@@ -1,10 +1,11 @@
+import logging
 from typing import Optional, List
 
 from aioredis import Redis
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 
-from app.core.cypt_utils import encrypt_with_key
+from app.core.cypt_utils import encrypt_with_key, decrypt_with_key
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
 from app.dependencies.auth import get_current_user
@@ -13,6 +14,9 @@ from app.models.site import SiteCreate, SiteRead, Site, SiteSimpleRead
 from app.models.credential import Credential, CredentialCreate, CredentialRead
 
 router = APIRouter()
+
+logger = logging.getLogger("pyvault.api.dashboard")
+logging.basicConfig(level=logging.DEBUG)
 
 
 @router.get("/ping")
@@ -113,15 +117,11 @@ async def create_credential(
     credential_data.user_id = user.id
 
     # Encrypt incoming password with user's key
-    encryption_key = await redis.get(str(user.id))
-    if not encryption_key:
-        encryption_key = user.public_key
-        await redis.execute_command('set', str(user.id), encryption_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    else:
-        encryption_key = encryption_key.decode("utf-8")
-
+    encryption_key = user.public_key
+    plaintext_password = credential_data.encrypted_password
     credential_data.encrypted_password = encrypt_with_key(encryption_key, credential_data.encrypted_password)
     credential = await credential_crud.create(credential_data=credential_data)
+    credential.encrypted_password = plaintext_password
 
     return credential
 
@@ -141,6 +141,8 @@ async def read_credential_by_id(
     if not credential:
         raise HTTPException(status_code=404, detail="Item not found")
 
+    decryption_key = user.private_key.decode("utf-8")
+    credential.encrypted_password = decrypt_with_key(decryption_key, credential.encrypted_password)
     return credential
 
 
@@ -157,6 +159,7 @@ async def read_credentials(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> list[Credential]:
+    logger.debug(f"Reading credentials for user {user.id}")
     if limit < 0 or offset < 0:
         raise HTTPException(
             status_code=400,
@@ -164,6 +167,13 @@ async def read_credentials(
         )
     credentials = await credential_crud.read_personal_many(offset=offset, limit=limit, site_id=site_id,
                                                            user_id=user.id)
+
+    # Decrypt incoming password with user's key
+    decryption_key = user.private_key.decode("utf-8")
+
+    for credential in credentials:
+        credential.encrypted_password = decrypt_with_key(decryption_key, credential.encrypted_password)
+
     return credentials
 
 
