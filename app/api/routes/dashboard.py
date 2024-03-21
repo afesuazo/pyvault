@@ -140,7 +140,7 @@ async def read_credential_by_id(
     if not credential:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    decryption_key = user.private_key.decode("utf-8")
+    decryption_key = user.private_key
     credential.encrypted_password = decrypt_with_key(decryption_key, credential.encrypted_password)
     return credential
 
