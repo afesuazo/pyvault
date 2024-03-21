@@ -158,7 +158,6 @@ async def read_credentials(
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
         user=Depends(get_current_user)
 ) -> list[Credential]:
-    logger.debug(f"Reading credentials for user {user.id}")
     if limit < 0 or offset < 0:
         raise HTTPException(
             status_code=400,
@@ -168,8 +167,7 @@ async def read_credentials(
                                                            user_id=user.id)
 
     # Decrypt incoming password with user's key
-    decryption_key = user.private_key.decode("utf-8")
-
+    decryption_key = user.private_key
     for credential in credentials:
         credential.encrypted_password = decrypt_with_key(decryption_key, credential.encrypted_password)
 
