@@ -11,7 +11,7 @@ from app.crud.site import SiteCRUD
 from app.dependencies.auth import get_current_user
 from app.dependencies.redis import get_redis
 from app.models.site import SiteCreate, SiteRead, Site, SiteSimpleRead
-from app.models.credential import Credential, CredentialCreate, CredentialRead
+from app.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 
 router = APIRouter()
 
@@ -190,3 +190,41 @@ async def delete_credential_by_id(
         return
 
     response.status_code = status.HTTP_404_NOT_FOUND
+
+
+@router.put(
+    "/credentials/{credential_id}",
+    summary="Update a credential",
+    response_model=CredentialRead,
+    status_code=status.HTTP_200_OK,
+)
+async def update_credential_by_id(
+        credential_id: int,
+        credential_data: CredentialUpdate,
+        credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        user=Depends(get_current_user),
+) -> Credential:
+    credential = await credential_crud.read_personal(credential_id, user.id)
+    if not credential:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    # If password is provided, encrypt it with user's key
+    if credential_data.encrypted_password:
+        encryption_key = user.public_key
+        credential_data.encrypted_password = encrypt_with_key(encryption_key, credential_data.encrypted_password)
+
+    # If values are empty strings, set them to the current values
+    credential_data = credential_data.dict()
+    for key, value in credential_data.items():
+        if not value and key not in ["favorite"]:
+            credential_data[key] = getattr(credential, key)
+
+    credential_data = CredentialUpdate(**credential_data)
+
+    # Update the credential data to match the incoming data
+    try:
+        updated_credential = await credential_crud.update(credential_id, credential_data)
+    except AssertionError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return updated_credential
