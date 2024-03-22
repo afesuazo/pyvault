@@ -227,4 +227,5 @@ async def update_credential_by_id(
     except AssertionError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+    updated_credential.encrypted_password = decrypt_with_key(user.private_key, updated_credential.encrypted_password)
     return updated_credential
