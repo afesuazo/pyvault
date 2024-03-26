@@ -8,11 +8,16 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth_utils import create_access_token
 from app.core.cypt_utils import generate_key_pair
 from app.crud.user import UserCRUD
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_refresh_token, TokenData
 from app.dependencies.redis import get_redis
 from app.models.token import Token
 from app.models.user import UserCreate, User, UserRead, UserRegistrationRead, UserCreateInternal
-from config import ACCESS_TOKEN_EXPIRE_MINUTES
+from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
+
+import logging
+
+logger = logging.getLogger("pyvault.routes.auth")
+logging.basicConfig(level=logging.DEBUG)
 
 router = APIRouter()
 
@@ -20,8 +25,7 @@ router = APIRouter()
 # TODO: Move to developer only endpoint and require admin user credentials
 @router.get("/all-users", response_model=list[User])
 async def temp_users(user_crud: UserCRUD = Depends(UserCRUD)) -> list[User]:
-    users = await user_crud.read_many(0, 100)
-    return users
+    return await user_crud.read_many(0, 100)
 
 
 @router.post(
@@ -52,7 +56,8 @@ async def register_user(
     public_key, private_key = generate_key_pair()
 
     # Save user to database
-    user_internal_data: UserCreateInternal = UserCreateInternal(**user_data.dict(), public_key=public_key, private_key=private_key)
+    user_internal_data: UserCreateInternal = UserCreateInternal(**user_data.dict(), public_key=public_key,
+                                                                private_key=private_key)
     user = await user_crud.create(user_data=user_internal_data)
     user_registration_read = UserRegistrationRead(**user.dict(exclude_unset=True))
     return user_registration_read
@@ -80,11 +85,46 @@ async def login_user(
     access_token_expire_time = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(user=user.username, expires_delta=access_token_expire_time)
 
-    await redis.execute_command('set', f"{str(user.id)}_public", user.public_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    await redis.execute_command('set', f"{str(user.id)}_private", user.private_key, 'ex', ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    refresh_token_expire_time = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_token = create_access_token(user=user.username, expires_delta=refresh_token_expire_time)
 
-    token = Token(access_token=access_token, token_type="bearer", expiration_time=access_token_expire_time.seconds)
-    return token
+    await redis.set(f"user:{user.id}:refresh_token", refresh_token, ex=REFRESH_TOKEN_EXPIRE_MINUTES * 60)
+
+    return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer",
+                 expiration_time=access_token_expire_time.total_seconds())
+
+
+@router.post(
+    "/refresh",
+    summary="Refresh token",
+    response_model=Token,
+    status_code=status.HTTP_200_OK
+)
+async def refresh_user_token(
+        refresh_token_data: TokenData = Depends(get_refresh_token),
+        user_crud: UserCRUD = Depends(UserCRUD),
+        redis: Redis = Depends(get_redis)
+):
+    user: Optional[User] = await user_crud.read_by_username(username=refresh_token_data.username)
+
+    # Check if refresh token is valid
+    stored_refresh_token = await redis.get(f"user:{user.id}:refresh_token")
+    stored_refresh_token = stored_refresh_token.decode() if stored_refresh_token else None
+
+    if not stored_refresh_token or stored_refresh_token != refresh_token_data.token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+    # Refresh token is valid. Give the user a new access token and refresh token
+    new_access_token_expire_time = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_access_token = create_access_token(user=user.username, expires_delta=new_access_token_expire_time)
+
+    new_refresh_token_expire_time = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    new_refresh_token = create_access_token(user=user.username, expires_delta=new_refresh_token_expire_time)
+
+    await redis.set(f"user:{user.id}:refresh_token", new_refresh_token, ex=REFRESH_TOKEN_EXPIRE_MINUTES * 60)
+
+    return Token(access_token=new_access_token, refresh_token=new_refresh_token, token_type="bearer",
+                 expiration_time=new_access_token_expire_time.total_seconds())
 
 
 @router.get(

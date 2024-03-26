@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi import Depends, HTTPException
-from fastapi import status
+from fastapi import status, Header
 
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class TokenData(BaseModel):
+    token: str | None = None
     username: str | None = None
 
 
@@ -40,3 +41,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme), user_crud: UserC
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_refresh_token(x_refresh_token: str = Header(None)) -> TokenData:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(x_refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(token=x_refresh_token, username=username)
+    except JWTError as e:
+        logger.error("JWTError: " + str(e))
+        raise credentials_exception
+
+    return token_data
