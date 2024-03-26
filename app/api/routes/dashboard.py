@@ -202,6 +202,7 @@ async def update_credential_by_id(
         credential_id: int,
         credential_data: CredentialUpdate,
         credential_crud: CredentialCRUD = Depends(CredentialCRUD),
+        site_crud: SiteCRUD = Depends(SiteCRUD),
         user=Depends(get_current_user),
 ) -> Credential:
     credential = await credential_crud.read_personal(credential_id, user.id)
@@ -216,8 +217,17 @@ async def update_credential_by_id(
     # If values are empty strings, set them to the current values
     credential_data = credential_data.dict()
     for key, value in credential_data.items():
-        if not value and key not in ["favorite"]:
+        if value is None:
+            if key == "site_id":
+                credential_data[key] = None
+            continue
+        elif value == "" and key not in ["favorite"]:
             credential_data[key] = getattr(credential, key)
+        elif key == "site_id":
+            site = await site_crud.read(credential_data[key])
+            if not site:
+                raise HTTPException(status_code=404, detail="Site not found")
+            credential_data[key] = site.id
 
     credential_data = CredentialUpdate(**credential_data)
 
