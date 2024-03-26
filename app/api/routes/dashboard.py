@@ -1,15 +1,12 @@
 import logging
 from typing import Optional, List
 
-from aioredis import Redis
-from config import ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 
 from app.core.cypt_utils import encrypt_with_key, decrypt_with_key
 from app.crud.credential import CredentialCRUD
 from app.crud.site import SiteCRUD
 from app.dependencies.auth import get_current_user
-from app.dependencies.redis import get_redis
 from app.models.site import SiteCreate, SiteRead, Site, SiteSimpleRead
 from app.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
 
