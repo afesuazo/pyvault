@@ -17,7 +17,6 @@ class SiteBase(SQLModel):
         return value
 
 
-
 class Site(SiteBase, table=True):
     __tablename__ = "site"
 
