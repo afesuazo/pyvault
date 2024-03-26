@@ -37,7 +37,7 @@ class CredentialCreate(CredentialBase):
 
 
 class CredentialUpdate(CredentialBase):
-    pass
+    site_id: Optional[int] = None
 
 
 class CredentialRead(CredentialBase):
